@@ -9,13 +9,26 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "remote-compilation.helloWorld",
-        "title": "Hello World"
+        "command": "remote-compilation.addMachine",
+        "title": "Add Machine",
+        "icon": "$(add)"
+      },
+      {
+        "command": "remote-compilation.removeMachine",
+        "title": "Remove Machine"
+      },
+      {
+        "command": "remote-compilation.connect",
+        "title": "Connect",
+        "icon": "$(plug)"
+      },
+      {
+        "command": "remote-compilation.disconnect",
+        "title": "Disconnect"
       }
     ],
     "viewsContainers": {
@@ -39,6 +52,35 @@
         }
       ]
     },
+    "menus": {
+      "view/item/context": [
+        {
+          "command": "remote-compilation.connect",
+          "when": "viewItem == machineItem",
+          "group": "inline"
+        },
+        {
+          "command": "remote-compilation.addMachine",
+          "when": "viewItem == machineList",
+          "group": "inline"
+        },
+        {
+          "command": "remote-compilation.connect",
+          "when": "viewItem == machineItem",
+          "group": "z_commands"
+        },
+        {
+          "command": "remote-compilation.disconnect",
+          "when": "viewItem == machineItem",
+          "group": "z_commands"
+        },
+        {
+          "command": "remote-compilation.removeMachine",
+          "when": "viewItem == machineItem",
+          "group": "z_commands"
+        }
+      ]
+    },
     "configuration": {
       "type": "object",
       "title": "Remote Compilation",
@@ -52,6 +94,14 @@
               "name": {
                 "type": "string",
                 "description": "Name of the remote machine"
+              },
+              "paths": {
+                "type": "array",
+                "description": "remote-path",
+                "items": {
+                  "type": "string",
+                  "description": "Path of the shared folder on the machine"
+                }
               }
             }
           }
@@ -68,14 +118,13 @@
     "test": "vscode-test"
   },
   "devDependencies": {
-    "@types/vscode": "^1.92.0",
     "@types/mocha": "^10.0.7",
     "@types/node": "20.x",
+    "@types/vscode": "^1.92.0",
     "@typescript-eslint/eslint-plugin": "^7.14.1",
     "@typescript-eslint/parser": "^7.11.0",
-    "eslint": "^8.57.0",
-    "typescript": "^5.4.5",
     "@vscode/test-cli": "^0.0.9",
-    "@vscode/test-electron": "^2.4.0"
+    "@vscode/test-electron": "^2.4.0",
+    "eslint": "^8.57.0"
   }
 }
