@@ -1,6 +1,6 @@
 {
   "name": "remote-compilation",
-  "displayName": "remote-compilation",
+  "displayName": "Remote Compilation & Macros",
   "description": "",
   "version": "0.0.1",
   "engines": {
@@ -29,6 +29,46 @@
       {
         "command": "remote-compilation.disconnect",
         "title": "Disconnect"
+      },
+      {
+        "command": "remote-compilation.addPath",
+        "title": "Add Path"
+      },
+      {
+        "command": "remote-compilation.removePath",
+        "title": "Remove Path"
+      },
+      {
+        "command": "remote-compilation.selectPath",
+        "title": "Select Path"
+      },
+      {
+        "command": "remote-compilation.unselectPath",
+        "title": "Unselect Path"
+      },
+      {
+        "command": "remote-compilation.addMacro",
+        "title": "Add Macro",
+        "icon": "$(add)"
+      },
+      {
+        "command": "remote-compilation.removeMacro",
+        "title": "Remove Macro"
+      },
+      {
+        "command": "remote-compilation.runMacro",
+        "title": "Run Macro",
+        "icon": "$(run)"
+      },
+      {
+        "command": "remote-compilation.refreshTreeMacro",
+        "title": "Refresh View Macro",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "remote-compilation.refreshTreeMachine",
+        "title": "Refresh View Machine",
+        "icon": "$(refresh)"
       }
     ],
     "viewsContainers": {
@@ -78,6 +118,58 @@
           "command": "remote-compilation.removeMachine",
           "when": "viewItem == machineItem",
           "group": "z_commands"
+        },
+        {
+          "command": "remote-compilation.addPath",
+          "when": "viewItem == machineItem",
+          "group": "z_commands"
+        },
+        {
+          "command": "remote-compilation.removePath",
+          "when": "viewItem == machinePathItem",
+          "group": "z_commands"
+        },
+        {
+          "command": "remote-compilation.selectPath",
+          "when": "viewItem == machinePathItem",
+          "group": "z_commands"
+        },
+        {
+          "command": "remote-compilation.unselectPath",
+          "when": "viewItem == machinePathItem",
+          "group": "z_commands"
+        },
+        {
+          "command": "remote-compilation.addMacro",
+          "when": "viewItem == macroList",
+          "group": "inline"
+        },
+        {
+          "command": "remote-compilation.removeMacro",
+          "when": "viewItem == macroItem",
+          "group": "z_commands"
+        },
+        {
+          "command": "remote-compilation.runMacro",
+          "when": "viewItem == macroItem",
+          "group": "z_commands"
+        },
+        {
+          "command": "remote-compilation.runMacro",
+          "when": "viewItem == macroItem",
+          "group": "inline"
+        }
+      ],
+      "view/title" : [
+        {
+          "command": "remote-compilation.refreshTreeMacro",
+          "when": "view == remote-macros",
+          "group": "navigation"
+        },
+        {
+          "command": "remote-compilation.refreshTreeMachine",
+          "when": "view == remote-machines",
+          "group": "navigation"
         }
       ]
     },
@@ -102,6 +194,27 @@
                   "type": "string",
                   "description": "Path of the shared folder on the machine"
                 }
+              }
+            }
+          }
+        },
+        "remote-compilation.macros": {
+          "type": "array",
+          "description": "List of macros",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Name of the macro"
+              },
+              "command": {
+                "type": "string",
+                "description": "Command to execute"
+              },
+              "group" : {
+                "type": "string",
+                "description": "Type of the macro, supported groups: 'build', 'remote', 'local'"
               }
             }
           }
