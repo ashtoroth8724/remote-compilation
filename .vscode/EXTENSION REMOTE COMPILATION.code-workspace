@@ -4,4 +4,22 @@
             "path": ".."
         }
     ],
+    "settings": {
+        "remote-compilation.macros": [
+            {
+                "name": "echo remote",
+                "command": "echo 'Hello from remote'",
+                "group": "remote"
+            },
+            {
+                "command": "echo 'Hello from local'",
+                "group": "local"
+            },
+            {
+                "name": "make all",
+                "command": "all",
+                "group": "build"
+            }
+        ]
+    }
 }

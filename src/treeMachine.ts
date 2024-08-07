@@ -33,14 +33,40 @@ export class TreeMachine implements vscode.TreeDataProvider<vscode.TreeItem> {
     
         const machineList = new MachineList('Machines', this);
         machineList.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
-        machineList.children = this.getMachines().map(name => {
-            const machineItem = new MachineItem(name, machineList);
-            machineItem.collapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
-            machineItem.children = this.getPaths(name).map(path => {
-                return new MachinePathItem(path, machineItem);
-            });
-            return machineItem;
+        const machines = this.getMachines();
+        machines.forEach((machine) => {
+            let machineItem: MachineItem;
+            if (machine.name) {
+                machineItem = new MachineItem(machine.name, machineList);
+                machineItem.tooltip = machine.host;
+                machineItem.ip = machine.host;
+            } else if (machine.host) {
+                machineItem = new MachineItem(machine.host, machineList);
+                machineItem.ip = machine.host;
+            } else {
+                console.error('Machine has no name or host:', machine);
+                return;
+            }
+            if (machine.paths) {
+                machine.paths.forEach((path) => {
+                    const pathItem = new MachinePathItem(path, machineItem);
+                    machineItem.addChild(pathItem);
+                });
+            }
+            if (machine.port) {
+                machineItem.port = machine.port;
+            }
+            if (machine.password) {
+                machineItem.password = 'password';
+                if (machine.name) {
+                    vscode.window.showInformationMessage(`Warning: Password for ${machine.name} is stored in plain text`);
+                } else if (machine.host) {
+                    vscode.window.showInformationMessage(`Warning: Password for ${machine.host} is stored in plain text`);
+                }
+            }
+            machineList.addChild(machineItem);
         });
+
         items.push(machineList);
     
         this.children = machineList;
@@ -75,23 +101,12 @@ export class TreeMachine implements vscode.TreeDataProvider<vscode.TreeItem> {
         this.refresh();
     }
 
-    getMachines(): string[] {
-        const config = vscode.workspace.getConfiguration("remote-compilation");
-        const machines: { name: string }[] = config.get('machines', []);
-        return machines.map(({ name }) => name);
-    }
 
-    getPaths(machineName: string): string[] {
+    getMachines(): { name: string, paths: string[], port: string, host: string, password: string }[]  {
         const config = vscode.workspace.getConfiguration("remote-compilation");
-        const machines: { name: string, paths?: string[] }[] = config.get('machines', []);
-        const machine = machines.find(({ name }) => name === machineName);
-        if (machine && machine.paths) {
-            console.log(`Paths for ${machineName}: ${machine.paths}`);
-            return machine.paths;
-        } else {
-            console.log(`No paths found for ${machineName}`);
-            return [];
-        }
+        const machines: { name: string, paths: string[], port: string, host: string, password: string }[] = config.get('machines', []);
+        log('Machines found:', machines);
+        return machines;
     }
 
     setDescription(description: string, item: vscode.TreeItem) {
@@ -181,9 +196,12 @@ export class MachineList extends vscode.TreeItem {
         return this.children?.find((child) => child.status === 'focused');
     }
 
-    getFocusedName(): string | undefined {
-        const focusedMachineName = this.getFocused()?.label;
-        return focusedMachineName?.toString();
+
+    addChild(child: MachineItem) {
+        if (!this.children) {
+            this.children = [];
+        }
+        this.children.push(child);
     }
 }
 
@@ -194,17 +212,18 @@ export class MachineItem extends vscode.TreeItem {
     parent?: MachineList;
     children?: MachinePathItem[];
     status: string = 'offline';
-    ip: string | undefined;
+    ip?: string;
+    port?: string;
+    password?: string;
 
     terminal: vscode.Terminal | undefined;
     constructor(label: string, parent: MachineList) {
         super(label);
-        this.ip = label;
         this.parent = parent;
         this.description = this.status;
         this.iconPath = new vscode.ThemeIcon('server');
         this.contextValue = 'machineItem';
-        const existingTerminal = vscode.window.terminals.find(terminal => terminal.name === this.ip);
+        const existingTerminal = vscode.window.terminals.find(terminal => terminal.name === this.label?.toString());
         if (existingTerminal) {
             this.terminal = existingTerminal;
             this.status = 'online';
@@ -216,9 +235,16 @@ export class MachineItem extends vscode.TreeItem {
 
     private connect() {
         this.status = 'connecting';
-        this.terminal = vscode.window.createTerminal({ name: this.ip });
+        this.terminal = vscode.window.createTerminal({ name: this.label?.toString() });
         this.terminal.show();
-        this.terminal.sendText('ssh ' + this.label);
+        if (this.port) {
+            this.terminal.sendText('ssh -p ' + this.port + ' ' + this.ip);
+        } else {
+            this.terminal.sendText('ssh ' + this.label);
+        }
+        if (this.password) {
+            this.terminal.sendText(this.password);
+        }
         this.status = 'focused';
     }
 
@@ -272,6 +298,12 @@ export class MachineItem extends vscode.TreeItem {
             }
             this.parent.parent.setDescription(this.status, this);
         }
+    }
+    addChild(child: MachinePathItem) {
+        if (!this.children) {
+            this.children = [];
+        }
+        this.children.push(child);
     }
 }
 

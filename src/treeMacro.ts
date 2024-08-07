@@ -30,6 +30,12 @@ export class TreeMacro implements vscode.TreeDataProvider<vscode.TreeItem> {
         const macroLocalList = new MacroList("Local Macros");
         const macros = this.getMacros();
         macros.forEach(macro => {
+            if (!macro.command || !macro.group) {
+                console.log(`Macro ${macro} is missing a command or a group`);
+                return;
+            } else if (!macro.name) {
+                macro.name = macro.command;
+            }
             log(`Adding macro "${macro.name}": "${macro.command}" to group "${macro.group}"`);
             if (macro.group === "build") {
                 macroBuildList.addChild(new MacroBuild(macro.name, macro.command, macroBuildList));
@@ -41,8 +47,6 @@ export class TreeMacro implements vscode.TreeDataProvider<vscode.TreeItem> {
                 console.log(`Macro ${macro.name} has an unkown group: ${macro.group}`);
             }
         });
-        macroLocalList.addChild(new MacroLocal("echo Hello", "echo Hello", macroLocalList));
-
 
         items.push(macroLocalList);
         items.push(macroBuildList);
@@ -66,6 +70,14 @@ export class TreeMacro implements vscode.TreeDataProvider<vscode.TreeItem> {
         const macros: { name: string, command: string, group: string }[] = config.get('macros', []);
         log('Macros found:', macros);
         return macros;
+    }
+
+    async addMacro() {
+        //TODO: implement add macro and register its command
+    }
+
+    async removeMacro(macroItem: MacroItem) {
+        //TODO: implement remove macro and register its command
     }
 }
 
