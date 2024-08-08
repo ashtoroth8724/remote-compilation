@@ -120,16 +120,6 @@
           "group": "inline"
         },
         {
-          "command": "remote-compilation.addMachine",
-          "when": "viewItem == machineList",
-          "group": "inline"
-        },
-        {
-          "command": "remote-compilation.addMachine",
-          "when": "viewItem == machineList",
-          "group": "z_commands"
-        },
-        {
           "command": "remote-compilation.connect",
           "when": "viewItem == machineItem",
           "group": "a_commands"
@@ -234,7 +224,12 @@
         {
           "command": "remote-compilation.refreshTreeMachine",
           "when": "view == remote-machines",
-          "group": "navigation"
+          "group": "navigation@1"
+        },
+        {
+          "command": "remote-compilation.addMachine",
+          "when": "view == remote-machines",
+          "group": "navigation@2"
         }
       ]
     },
