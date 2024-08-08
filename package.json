@@ -69,6 +69,26 @@
         "command": "remote-compilation.refreshTreeMachine",
         "title": "Refresh View Machine",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "remote-compilation.editConfig",
+        "title": "Edit Config (JSON)",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "remote-compilation.cleanMacro",
+        "title": "Clean",
+        "icon": "$(error)"
+      },
+      {
+        "command": "remote-compilation.cleanAndBuildMacro",
+        "title": "Clean & Build",
+        "icon": "$(run-errors)"
+      },
+      {
+        "command": "remote-compilation.buildMacro",
+        "title": "Build",
+        "icon": "$(run)"
       }
     ],
     "viewsContainers": {
@@ -76,7 +96,7 @@
         {
           "id": "remote-compilation",
           "title": "Remote Compilation",
-          "icon": "resources/terminal.svg"
+          "icon": "$(terminal)"
         }
       ]
     },
@@ -105,14 +125,19 @@
           "group": "inline"
         },
         {
+          "command": "remote-compilation.addMachine",
+          "when": "viewItem == machineList",
+          "group": "z_commands"
+        },
+        {
           "command": "remote-compilation.connect",
           "when": "viewItem == machineItem",
-          "group": "z_commands"
+          "group": "a_commands"
         },
         {
           "command": "remote-compilation.disconnect",
           "when": "viewItem == machineItem",
-          "group": "z_commands"
+          "group": "a_commands"
         },
         {
           "command": "remote-compilation.removeMachine",
@@ -132,12 +157,12 @@
         {
           "command": "remote-compilation.selectPath",
           "when": "viewItem == machinePathItem",
-          "group": "z_commands"
+          "group": "a_commands"
         },
         {
           "command": "remote-compilation.unselectPath",
           "when": "viewItem == machinePathItem",
-          "group": "z_commands"
+          "group": "a_commands"
         },
         {
           "command": "remote-compilation.addMacro",
@@ -145,22 +170,62 @@
           "group": "inline"
         },
         {
+          "command": "remote-compilation.addMacro",
+          "when": "viewItem == macroList",
+          "group": "z_commands"
+        },
+        {
           "command": "remote-compilation.removeMacro",
-          "when": "viewItem == macroItem",
+          "when": "viewItem == macroItem || viewItem == buildItem || viewItem == buildItemWithClean",
           "group": "z_commands"
         },
         {
           "command": "remote-compilation.runMacro",
           "when": "viewItem == macroItem",
-          "group": "z_commands"
+          "group": "a_commands"
         },
         {
           "command": "remote-compilation.runMacro",
           "when": "viewItem == macroItem",
           "group": "inline"
+        },
+        {
+          "command": "remote-compilation.editConfig",
+          "when": "viewItem == machineItem || viewItem == macroItem || viewItem == machinePathItem || viewItem == buildItem || viewItem == buildItemWithClean",
+          "group": "z_commands"
+        },
+        {
+          "command": "remote-compilation.cleanMacro",
+          "when": "viewItem == buildItemWithClean",
+          "group": "a_commands"
+        },
+        {
+          "command": "remote-compilation.cleanAndBuildMacro",
+          "when": "viewItem == buildItemWithClean",
+          "group": "a_commands"
+        },
+        {
+          "command": "remote-compilation.buildMacro",
+          "when": "viewItem == buildItem || viewItem == buildItemWithClean",
+          "group": "a_commands"
+        },
+        {
+          "command": "remote-compilation.buildMacro",
+          "when": "viewItem == buildItem || viewItem == buildItemWithClean",
+          "group": "inline@1"
+        },
+        {
+          "command": "remote-compilation.cleanAndBuildMacro",
+          "when": "viewItem == buildItemWithClean",
+          "group": "inline@2"
+        },
+        {
+          "command": "remote-compilation.cleanMacro",
+          "when": "viewItem == buildItemWithClean",
+          "group": "inline@3"
         }
       ],
-      "view/title" : [
+      "view/title": [
         {
           "command": "remote-compilation.refreshTreeMacro",
           "when": "view == remote-macros",
@@ -199,9 +264,13 @@
                 "type": "string",
                 "description": "Password to connect to the machine"
               },
-              "host": {
+              "user": {
                 "type": "string",
-                "description": "Host of the machine (user@host)"
+                "description": "User to connect to"
+              },
+              "ip": {
+                "type": "string",
+                "description": "IP of the machine"
               },
               "port": {
                 "type": "number",
@@ -209,7 +278,9 @@
               }
             }
           },
-          "required": ["host"]
+          "required": [
+            "host"
+          ]
         },
         "remote-compilation.macros": {
           "type": "array",
@@ -225,13 +296,24 @@
                 "type": "string",
                 "description": "Command to execute"
               },
-              "group" : {
+              "group": {
                 "type": "string",
                 "description": "Type of the macro, supported groups: 'build', 'remote', 'local'"
+              },
+              "cleanCommand": {
+                "type": "string",
+                "description": "Argument to clean the project (for group 'build' only)"
+              },
+              "subPath": {
+                "type": "string",
+                "description": "Subpath to the make file from the root project (for group 'build' only)"
               }
             }
           },
-          "required": ["command", "group"],
+          "required": [
+            "command",
+            "group"
+          ],
           "default": {
             "port": 22
           }
@@ -256,5 +338,9 @@
     "@vscode/test-cli": "^0.0.9",
     "@vscode/test-electron": "^2.4.0",
     "eslint": "^8.57.0"
+  },
+  "dependencies": {
+    "appdata-path": "^1.0.0",
+    "ping": "^0.4.4"
   }
 }

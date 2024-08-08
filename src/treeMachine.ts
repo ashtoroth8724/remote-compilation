@@ -2,7 +2,14 @@
 
 import { log } from 'console';
 import path from 'path';
+import { isReadable } from 'stream';
 import * as vscode from 'vscode';
+import * as ping from 'ping';
+
+function sleep(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 
 export class TreeMachine implements vscode.TreeDataProvider<vscode.TreeItem> {
     private _onDidChangeTreeData: vscode.EventEmitter<vscode.TreeItem | undefined | void> = new vscode.EventEmitter<vscode.TreeItem | undefined | void>();
@@ -36,17 +43,19 @@ export class TreeMachine implements vscode.TreeDataProvider<vscode.TreeItem> {
         const machines = this.getMachines();
         machines.forEach((machine) => {
             let machineItem: MachineItem;
-            if (machine.name) {
+            if (machine.name && machine.user && machine.ip) {
                 machineItem = new MachineItem(machine.name, machineList);
-                machineItem.tooltip = machine.host;
-                machineItem.ip = machine.host;
-            } else if (machine.host) {
-                machineItem = new MachineItem(machine.host, machineList);
-                machineItem.ip = machine.host;
+                machineItem.tooltip = `${machine.user}@${machine.ip}`;
+                machineItem.ip = machine.ip;
+            } else if (machine.user && machine.ip) {
+                machineItem = new MachineItem(`${machine.user}@${machine.ip}`, machineList);
+                machineItem.ip = machine.ip;
             } else {
-                console.error('Machine has no name or host:', machine);
+                console.error('Machine has no ip and user:', machine);
                 return;
             }
+            machineItem.ip = machine.ip;
+            machineItem.user = machine.user;
             if (machine.paths) {
                 machine.paths.forEach((path) => {
                     const pathItem = new MachinePathItem(path, machineItem);
@@ -54,14 +63,15 @@ export class TreeMachine implements vscode.TreeDataProvider<vscode.TreeItem> {
                 });
             }
             if (machine.port) {
-                machineItem.port = machine.port;
+                machineItem.port = machine.port.toString();
             }
             if (machine.password) {
-                machineItem.password = 'password';
+                machineItem.password = machine.password;
+
                 if (machine.name) {
-                    vscode.window.showInformationMessage(`Warning: Password for ${machine.name} is stored in plain text`);
-                } else if (machine.host) {
-                    vscode.window.showInformationMessage(`Warning: Password for ${machine.host} is stored in plain text`);
+                    vscode.window.showWarningMessage(`Security Risk: Password for ${machine.name} is stored in plain text, you should try to use RSA keys instead`);
+                } else if (`${machine.user}@${machine.ip}`) {
+                    vscode.window.showWarningMessage(`Security Risk: Password for ${`${machine.user}@${machine.ip}`} is stored in plain text, you should try to use RSA keys instead`);
                 }
             }
             machineList.addChild(machineItem);
@@ -76,19 +86,24 @@ export class TreeMachine implements vscode.TreeDataProvider<vscode.TreeItem> {
     }
     
     async addMachine() {
-        const machineName = await vscode.window.showInputBox({
+        const userIP = await vscode.window.showInputBox({
             prompt: 'Enter machine name',
-            placeHolder: 'user@host:port',
+            placeHolder: 'user@ip',
         });
-    
-        if (machineName) {
-            console.log('Adding machine:', machineName);
-            const config = vscode.workspace.getConfiguration("remote-compilation");
-            const machines: { name: string }[] = config.get('machines', []);
-            machines.push({ name: machineName });
-            await config.update('machines', machines, vscode.ConfigurationTarget.Global);
-            console.log('Machine added to configuration:', machines);
+        if (!userIP) {
+            return;
         }
+        const [user, ip] = userIP.split('@');
+        if (!user && !ip) {
+            vscode.window.showErrorMessage('Invalid machine name, please enter a valid user@ip');
+            return;
+        }
+        console.log('Adding machine:', userIP);
+        const config = vscode.workspace.getConfiguration("remote-compilation");
+        const machines: { name: string, paths: string[], port: number, password: string, ip: string, user: string }[] = config.get('machines', []);
+        machines.push({ name: userIP, paths: [], port: 22, password: '', ip: ip, user: user });
+        await config.update('machines', machines, vscode.ConfigurationTarget.Global);
+        console.log('Machine added to configuration:', machines);
     }
 
     async removeMachine(machineItem: MachineItem) {
@@ -102,9 +117,9 @@ export class TreeMachine implements vscode.TreeDataProvider<vscode.TreeItem> {
     }
 
 
-    getMachines(): { name: string, paths: string[], port: string, host: string, password: string }[]  {
+    getMachines(): { name: string, paths: string[], port: number, password: string, ip: string, user: string }[]  {
         const config = vscode.workspace.getConfiguration("remote-compilation");
-        const machines: { name: string, paths: string[], port: string, host: string, password: string }[] = config.get('machines', []);
+        const machines: { name: string, paths: string[], port: number, password: string, ip: string, user: string }[] = config.get('machines', []);
         log('Machines found:', machines);
         return machines;
     }
@@ -167,6 +182,10 @@ export class TreeMachine implements vscode.TreeDataProvider<vscode.TreeItem> {
     getFocused() {
         return this.children?.getFocused();
     }
+
+    getMachineFromName(name: string): MachineItem | undefined {
+        return this.children?.children?.find((child) => child.label === name);
+    }
 }
 
 export class MachineList extends vscode.TreeItem {
@@ -215,13 +234,14 @@ export class MachineItem extends vscode.TreeItem {
     ip?: string;
     port?: string;
     password?: string;
+    user?: string;
 
     terminal: vscode.Terminal | undefined;
     constructor(label: string, parent: MachineList) {
         super(label);
         this.parent = parent;
         this.description = this.status;
-        this.iconPath = new vscode.ThemeIcon('server');
+        this.iconPath = new vscode.ThemeIcon('vm');
         this.contextValue = 'machineItem';
         const existingTerminal = vscode.window.terminals.find(terminal => terminal.name === this.label?.toString());
         if (existingTerminal) {
@@ -230,20 +250,36 @@ export class MachineItem extends vscode.TreeItem {
             this.terminal.show();
             this.refresh();
         }
+        this.collapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
         console.log("MachineItem created: ", this.label);
     }
 
-    private connect() {
+    private async connect() {
         this.status = 'connecting';
+        this.refresh();
+
+        //try to ping the machine to check if it is online
+        const res = await ping.promise.probe(this.ip);
+        if (!res.alive) {
+            vscode.window.showErrorMessage(`machine ${this.label} is unreachable`);
+            this.status = 'offline';
+            this.refresh();
+            return;
+        }
+
+
         this.terminal = vscode.window.createTerminal({ name: this.label?.toString() });
         this.terminal.show();
         if (this.port) {
-            this.terminal.sendText('ssh -p ' + this.port + ' ' + this.ip);
+            this.terminal.sendText(`ssh -p ${this.port} ${this.user}@${this.ip}`);
         } else {
-            this.terminal.sendText('ssh ' + this.label);
+            this.terminal.sendText(`ssh ${this.user}@${this.ip}`);
         }
+        console.log(`Connected to ${this.label}, on ${this.ip}, port ${this.port}`);
         if (this.password) {
+            await sleep(5000); //TODO: find a better way to wait for the terminal to be ready
             this.terminal.sendText(this.password);
+            console.log('Password sent');
         }
         this.status = 'focused';
     }
@@ -254,14 +290,14 @@ export class MachineItem extends vscode.TreeItem {
         this.refresh();
     }
 
-    toggleConnect() {
+    async toggleConnect() {
         if ((this.status === 'online')) {
             this.parent?.unfocusAll();
             this.terminal?.show();
             this.status = 'focused';
         } else if (this.status === 'offline') {
             this.parent?.unfocusAll();
-            this.connect();
+            await this.connect();
         }
         this.refresh();
     }
@@ -287,14 +323,18 @@ export class MachineItem extends vscode.TreeItem {
 
     refresh() {
         if (!this.parent) {
-            console.log(`could not find parent of ${this.label}`)
+            console.log(`could not find parent of ${this.label}`);
         } else if (!this.parent.parent) {
-            console.log(`Could not find parent of ${this.parent.label}`)
+            console.log(`Could not find parent of ${this.parent.label}`);
         } else {
             if (this.status === 'focused') {
-                this.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
+                this.iconPath = new vscode.ThemeIcon('vm-active');
+            } else if (this.status === 'connecting') {
+                this.iconPath = new vscode.ThemeIcon('vm-connect');
+            } else if (this.status === 'online') {
+                this.iconPath = new vscode.ThemeIcon('vm-outline');
             } else {
-                this.collapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
+                this.iconPath = new vscode.ThemeIcon('vm');
             }
             this.parent.parent.setDescription(this.status, this);
         }
@@ -305,6 +345,8 @@ export class MachineItem extends vscode.TreeItem {
         }
         this.children.push(child);
     }
+
+    
 }
 
 export class MachinePathItem extends vscode.TreeItem {

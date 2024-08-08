@@ -2,6 +2,10 @@ import * as vscode from 'vscode';
 import { TreeMachine, MachineItem, MachineList, MachinePathItem} from './treeMachine';
 import { register } from 'module';
 import {TreeMacro, MacroItem, MacroList, MacroLocal, MacroBuild, MacroRemote} from './treeMacro';
+import * as path from 'path';
+
+//npm install -S appdata-path
+import getAppDataPath from "appdata-path";
 
 export function activate(context: vscode.ExtensionContext) {
     const treeMachine = new TreeMachine();
@@ -19,8 +23,8 @@ export function activate(context: vscode.ExtensionContext) {
         await treeMachine.removeMachine(machine);
         treeMachine.refresh();
     });
-    vscode.commands.registerCommand('remote-compilation.connect', (machine: MachineItem) => {
-        machine.toggleConnect();
+    vscode.commands.registerCommand('remote-compilation.connect', async (machine: MachineItem) => {
+        await machine.toggleConnect();
     });
     vscode.commands.registerCommand('remote-compilation.disconnect', (machine: MachineItem) => {
         machine.disconnect();
@@ -61,8 +65,103 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('remote-compilation.refreshTreeMacro', () => {
         treeMacro.refresh();
     });
+    vscode.commands.registerCommand('remote-compilation.addMacro', async (macroList: MacroList) => {
+        await treeMacro.addMacro(macroList);
+        treeMacro.refresh();
+    });
+    vscode.commands.registerCommand('remote-compilation.removeMacro', async (macro: MacroItem) => {
+        await treeMacro.removeMacro(macro);
+        treeMacro.refresh();
+    });
+    vscode.commands.registerCommand('remote-compilation.cleanMacro', (macro: MacroItem) => {
+        if (macro instanceof MacroBuild) {
+            const focusedMachine = treeMachine.getFocused();
+            if (focusedMachine) {
+                macro.clean(focusedMachine);
+            } else {
+                vscode.window.showErrorMessage("No machine focused to clean the macro on");
+            }
+        } else {
+            vscode.window.showErrorMessage("Cannot clean a non Build Macro");
+        }
+    });
+    vscode.commands.registerCommand('remote-compilation.cleanAndBuildMacro', (macro: MacroItem) => {
+        if (macro instanceof MacroBuild) {
+            const focusedMachine = treeMachine.getFocused();
+            if (focusedMachine) {
+                macro.cleanAndBuild(focusedMachine);
+            } else {
+                vscode.window.showErrorMessage("No machine focused to clean the macro on");
+            }
+        } else {
+            vscode.window.showErrorMessage("Cannot clean and build a non Build Macro");
+        }
+    });
+    vscode.commands.registerCommand('remote-compilation.buildMacro', (macro: MacroItem) => {
+        if (macro instanceof MacroBuild) {
+            const focusedMachine = treeMachine.getFocused();
+            if (focusedMachine) {
+                macro.build(focusedMachine);
+            } else {
+                vscode.window.showErrorMessage("No machine focused to clean the macro on");
+            }
+        } else {
+            vscode.window.showErrorMessage("Cannot clean and build a non Build Macro");
+        }
+    });
+
+
+
+    // global commands
+    vscode.commands.registerCommand('remote-compilation.editConfig', async (item: vscode.TreeItem | undefined) => {
+        const config = vscode.workspace.getConfiguration("remote-compilation");
+        let configType = "user";
+        if (item instanceof MachineItem) {
+            const configInfo = config.inspect('machines');
+            if (configInfo && configInfo.workspaceValue !== undefined) {
+                configType = "workspace";
+            }
+        } else if (item instanceof MachinePathItem) {
+            const configInfo = config.inspect('paths');
+            if (configInfo && configInfo.workspaceValue !== undefined) {
+                configType = "workspace";
+            }
+        } else if (item instanceof MacroBuild || item instanceof MacroRemote || item instanceof MacroLocal) {
+            const configInfo = config.inspect('macros');
+            if (configInfo && configInfo.workspaceValue !== undefined) {
+                configType = "workspace";
+            }
+        }
+
+        await openSettings(configType);
+        });
 
 }
 
 export function deactivate() {}
 
+
+async function openSettings(configType: string) {
+    let settingsPath: string;
+    if (configType === 'user') {
+        //path is user/APPDATA/Roaming/Code/User/settings.json
+        settingsPath = path.join(getAppDataPath("Code"), 'User', 'settings.json');
+    } else if (configType === 'workspace') {
+        const workspaceFile = vscode.workspace.workspaceFile;
+        if (!workspaceFile) {
+            vscode.window.showErrorMessage('No workspace is open.');
+            return;
+        }
+        settingsPath = workspaceFile.fsPath;
+    } else {
+        vscode.window.showErrorMessage('Invalid config type.');
+        return;
+    }
+
+    try {
+        const document = await vscode.workspace.openTextDocument(settingsPath);
+        const editor = await vscode.window.showTextDocument(document);
+    } catch (error) {
+        vscode.window.showErrorMessage(`Failed to open settings: ${error}`);
+    }
+}
