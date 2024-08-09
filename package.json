@@ -202,7 +202,7 @@
         {
           "command": "remote-compilation.buildMacro",
           "when": "viewItem == buildItem || viewItem == buildItemWithClean",
-          "group": "inline@1"
+          "group": "inline@3"
         },
         {
           "command": "remote-compilation.cleanAndBuildMacro",
@@ -212,7 +212,7 @@
         {
           "command": "remote-compilation.cleanMacro",
           "when": "viewItem == buildItemWithClean",
-          "group": "inline@3"
+          "group": "inline@1"
         }
       ],
       "view/title": [

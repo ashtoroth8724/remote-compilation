@@ -46,10 +46,22 @@ export class TreeMachine implements vscode.TreeDataProvider<vscode.TreeItem> {
             machineItem.ip = machine.ip;
             machineItem.user = machine.user;
             if (machine.paths) {
-                machine.paths.forEach((path) => { /* TODO: Add path handling logic here */ });
+                machine.paths.forEach((path) => {
+                    const pathItem = new MachinePathItem(path, machineItem);
+                    machineItem.addChild(pathItem);
+                });
             }
-            if (machine.port) { /* TODO: Add port handling logic here */ }
-            if (machine.password) { /* TODO: Add password handling logic here */ }
+            if (machine.port) {
+                machineItem.port = machine.port.toString();
+            }
+            if (machine.password) {
+                machineItem.password = machine.password;
+                if (machine.name) {
+                    vscode.window.showWarningMessage(`Security Risk: Password for "${machine.name}" is stored in plain text, you should try to use RSA keys instead`);
+                } else if (`${machine.user}@${machine.ip}`) {
+                    vscode.window.showWarningMessage(`Security Risk: Password for "${`${machine.user}@${machine.ip}`}" is stored in plain text, you should try to use RSA keys instead`);
+                }                
+            }
             items.push(machineItem);
         });
 
@@ -64,10 +76,11 @@ export class TreeMachine implements vscode.TreeDataProvider<vscode.TreeItem> {
             placeHolder: 'user@ip',
         });
         if (!userIP) {
+            vscode.window.showErrorMessage('Invalid machine name, please enter a valid user@ip');
             return;
         }
-        const [user, ip] = userIP.split('@');
-        if (!user && !ip) {
+        let [user, ip] = userIP.split('@');
+        if (!user || !ip) {
             vscode.window.showErrorMessage('Invalid machine name, please enter a valid user@ip');
             return;
         }
@@ -111,7 +124,28 @@ export class TreeMachine implements vscode.TreeDataProvider<vscode.TreeItem> {
             prompt: 'Enter path',
             placeHolder: '/absolute/remote/path/to/your/project',
         }).then((path) => {
-            if (path) { /* TODO: Add path handling logic here */ } else { /* Handle no path entered */ }
+            if (path) {
+                try {
+                    const config = vscode.workspace.getConfiguration("remote-compilation");
+                    const machines: { name: string, paths?: string[] }[] = config.get('machines', []);
+                    const machine = machines.find(({ name }) => name === machineItem.label);
+                    if (machine) {
+                        if (machine.paths) {
+                            machine.paths.push(path);
+                        } else {
+                            machine.paths = [path];
+                        }
+                        config.update('machines', machines, vscode.ConfigurationTarget.Global);
+                        console.log('Path added to machine:', machine);
+                    } else {
+                        console.error('Machine not found:', machineItem.label);
+                    }
+                } catch (error) {
+                    console.error('Error updating machine paths:', error);
+                }
+            } else {
+                console.log('No path entered');
+            }
         });
         this._onDidChangeTreeData.fire(machineItem);
     }
@@ -176,7 +210,7 @@ export class MachineItem extends vscode.TreeItem {
         //try to ping the machine to check if it is online
         const res = await ping.promise.probe(this.ip);
         if (!res.alive) {
-            vscode.window.showErrorMessage(`machine ${this.label} is unreachable`);
+            vscode.window.showErrorMessage(`Error during connection: Machine "${this.label}" is unreachable`);
             this.status = 'offline';
             this.refresh();
             return;
@@ -218,7 +252,9 @@ export class MachineItem extends vscode.TreeItem {
 
     unselectAllPath() {
         this.children?.forEach((child) => {
-            if (child.description === 'selected') { /* TODO: Add unselect logic here */ }
+            if (child.description === 'selected') {
+                child.unselect();
+            }
         });
     }
 
@@ -237,7 +273,15 @@ export class MachineItem extends vscode.TreeItem {
         if (!this.parent) {
             console.log(`could not find parent of ${this.label}`);
         } else {
-            if (this.status === 'focused') { /* TODO: Add focused logic here */ } else if (this.status === 'connecting') { /* TODO: Add connecting logic here */ } else if (this.status === 'online') { /* TODO: Add online logic here */ } else { /* TODO: Add offline logic here */ }
+            if (this.status === 'focused') {
+                this.iconPath = new vscode.ThemeIcon('vm-active');
+            } else if (this.status === 'connecting') {
+                this.iconPath = new vscode.ThemeIcon('vm-connect');
+            } else if (this.status === 'online') {
+                this.iconPath = new vscode.ThemeIcon('vm-outline');
+            } else {
+                this.iconPath = new vscode.ThemeIcon('vm');
+            }
             this.parent.setDescription(this.status, this);
         }
     }
