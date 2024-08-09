@@ -78,17 +78,17 @@
       {
         "command": "remote-compilation.cleanMacro",
         "title": "Clean",
-        "icon": "$(error)"
+        "icon": "ressources/icons/dark/clean.svg"
       },
       {
         "command": "remote-compilation.cleanAndBuildMacro",
         "title": "Clean & Build",
-        "icon": "$(run-errors)"
+        "icon": "ressources/icons/dark/cleanAndBuild.svg"
       },
       {
         "command": "remote-compilation.buildMacro",
         "title": "Build",
-        "icon": "$(run)"
+        "icon": "ressources/icons/dark/build.svg"
       }
     ],
     "viewsContainers": {
@@ -302,6 +302,14 @@
               "subPath": {
                 "type": "string",
                 "description": "Subpath to the make file from the root project (for group 'build' only)"
+              },
+              "buildMachineIP": {
+                "type": "string",
+                "description": "IP of the machine to build on (for group 'build' only), local if not specified"
+              },
+              "makefileName": {
+                "type": "string",
+                "description": "Name of the makefile (for group 'build' only)"
               }
             }
           },
@@ -312,6 +320,14 @@
           "default": {
             "port": 22
           }
+        },
+        "remote-compilation.default.remoteRoot": {
+          "type": "string",
+          "description": "Default remote root path"
+        },
+        "remote-compilation.default.remoteProjectPath": {
+          "type": "string",
+          "description": "Default remote project path (relative to the remote root)"
         }
       }
     }

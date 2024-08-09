@@ -1,6 +1,9 @@
 // treeMachine.ts
 import * as vscode from 'vscode';
 import * as ping from 'ping';
+import * as path from 'path';
+import { get } from 'http';
+
 
 function sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -10,6 +13,9 @@ export class TreeMachine implements vscode.TreeDataProvider<vscode.TreeItem> {
     private _onDidChangeTreeData: vscode.EventEmitter<vscode.TreeItem | undefined | void> = new vscode.EventEmitter<vscode.TreeItem | undefined | void>();
     readonly onDidChangeTreeData: vscode.Event<vscode.TreeItem | undefined | void> = this._onDidChangeTreeData.event;
     children: MachineItem[] | undefined;
+    defaultPath?: string;
+    defaultMachine?: MachineItem;
+
 
     getTreeItem(element: vscode.TreeItem): vscode.TreeItem {
         return element;
@@ -17,6 +23,7 @@ export class TreeMachine implements vscode.TreeDataProvider<vscode.TreeItem> {
 
     getChildren(element?: vscode.TreeItem): Thenable<vscode.TreeItem[]> {
         console.log('getChildren called with element:', element);
+        ({path: this.defaultPath, machine: this.defaultMachine} = this.getDefault());
         if (element instanceof MachineItem) {
             console.log('Returning children of MachineItem:', element.children);
             return Promise.resolve(element.children || []);
@@ -45,6 +52,14 @@ export class TreeMachine implements vscode.TreeDataProvider<vscode.TreeItem> {
             }
             machineItem.ip = machine.ip;
             machineItem.user = machine.user;
+            if (this.defaultPath) {
+                console.log('Adding default path:', this.defaultPath);
+                const defaultPath = new MachinePathItem(this.defaultPath, machineItem);
+                defaultPath.label = 'Default Project Path';
+                defaultPath.tooltip = this.defaultPath;
+                machineItem.addChild(defaultPath);
+            }
+
             if (machine.paths) {
                 machine.paths.forEach((path) => {
                     const pathItem = new MachinePathItem(path, machineItem);
@@ -109,6 +124,10 @@ export class TreeMachine implements vscode.TreeDataProvider<vscode.TreeItem> {
         return machines;
     }
 
+    getMachineFromIP(ip: string): MachineItem | undefined {
+        return this.children?.find((child) => child.ip === ip);
+    }
+
     setDescription(description: string, item: vscode.TreeItem) {
         console.log(`Setting description of ${item.label} to: ${description}`);
         item.description = description;
@@ -124,7 +143,7 @@ export class TreeMachine implements vscode.TreeDataProvider<vscode.TreeItem> {
             prompt: 'Enter path',
             placeHolder: '/absolute/remote/path/to/your/project',
         }).then((path) => {
-            if (path) {
+            if (path && (path[0] === '/' || path[1] === ':')) {
                 try {
                     const config = vscode.workspace.getConfiguration("remote-compilation");
                     const machines: { name: string, paths?: string[] }[] = config.get('machines', []);
@@ -143,8 +162,10 @@ export class TreeMachine implements vscode.TreeDataProvider<vscode.TreeItem> {
                 } catch (error) {
                     console.error('Error updating machine paths:', error);
                 }
-            } else {
+            } else if (!path) {
                 console.log('No path entered');
+            } else {
+                vscode.window.showErrorMessage(`Error: Path "${path}" is not an absolute path`);
             }
         });
         this._onDidChangeTreeData.fire(machineItem);
@@ -167,9 +188,38 @@ export class TreeMachine implements vscode.TreeDataProvider<vscode.TreeItem> {
     getFocused() {
         return this.children?.find((child) => child.status === 'focused');
     }
-
-    getMachineFromName(name: string): MachineItem | undefined {
-        return this.children?.find((child) => child.label === name);
+    getDefault(): {path: string | undefined, machine: MachineItem | undefined} {
+        const defaultMachineIP = vscode.workspace.getConfiguration("remote-compilation").get('default.buildMachineIP');
+        const defaultMachine = this.children?.find((child) => child.ip === defaultMachineIP);
+        if (defaultMachine) {
+            if (!defaultMachine.label?.toString().endsWith(' (default)')) {
+                defaultMachine.label = defaultMachine.label + ' (default)';
+                if (defaultMachine.description) {
+                    this.setDescription(defaultMachine.description?.toString(), defaultMachine);
+                }
+            }
+        }
+        const defaultPath = this.getDefaultProjectPath();
+        return { path: defaultPath, machine: defaultMachine };
+    }
+    getDefaultProjectPath(): string | undefined {
+        const config = vscode.workspace.getConfiguration("remote-compilation");
+        const remoteRoot: string | undefined = config.get("default.remoteRoot");
+        const remoteProjectPath: string | undefined = config.get("default.remoteProjectPath");
+    
+        if (remoteRoot && remoteProjectPath) {
+            return `${remoteRoot}/${remoteProjectPath}`;
+        } else {
+            return;
+        }
+    }
+    unfocusAll() {
+        this.children?.forEach(child => {
+            if (child.status === 'focused') {
+                child.status = 'online';
+                child.refresh();
+            }
+        });
     }
 }
 
@@ -192,14 +242,15 @@ export class MachineItem extends vscode.TreeItem {
         this.description = this.status;
         this.iconPath = new vscode.ThemeIcon('vm');
         this.contextValue = 'machineItem';
-        const existingTerminal = vscode.window.terminals.find(terminal => terminal.name === this.label?.toString());
+        const existingTerminal = vscode.window.terminals.find(terminal => terminal.name === this.label?.toString())
+            || vscode.window.terminals.find(terminal => terminal.name === `${this.label?.toString()} (default)`);
         if (existingTerminal) {
             this.terminal = existingTerminal;
             this.status = 'online';
             this.terminal.show();
             this.refresh();
         }
-        this.collapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
+        this.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
         console.log("MachineItem created: ", this.label);
     }
 
@@ -215,7 +266,6 @@ export class MachineItem extends vscode.TreeItem {
             this.refresh();
             return;
         }
-
         this.terminal = vscode.window.createTerminal({ name: this.label?.toString() });
         this.terminal.show();
         if (this.port) {
@@ -223,28 +273,29 @@ export class MachineItem extends vscode.TreeItem {
         } else {
             this.terminal.sendText(`ssh ${this.user}@${this.ip}`);
         }
+        await sleep(5000); //TODO: find a better way to wait for the terminal to be ready
         console.log(`Connected to ${this.label}, on ${this.ip}, port ${this.port}`);
         if (this.password) {
-            await sleep(5000); //TODO: find a better way to wait for the terminal to be ready
             this.terminal.sendText(this.password);
             console.log('Password sent');
         }
         this.status = 'focused';
+        return;
     }
 
     disconnect() {
         this.terminal?.dispose();
+        this.unselectAllPath();
         this.status = 'offline';
         this.refresh();
     }
 
     async toggleConnect() {
         if ((this.status === 'online')) {
-            this.parent?.children?.forEach(child => child.status = 'online');
+            this.parent?.unfocusAll();
             this.terminal?.show();
             this.status = 'focused';
         } else if (this.status === 'offline') {
-            this.parent?.children?.forEach(child => child.status = 'online');
             await this.connect();
         }
         this.refresh();
@@ -264,9 +315,18 @@ export class MachineItem extends vscode.TreeItem {
     }
 
     getSelectedPath(): string | undefined {
-        const selectedPath = this.children?.find((child) => child.description === 'selected')?.label?.toString();
+        const selectedPath = this.children?.find((child) => child.description === 'selected')?.path?.toString();
         console.log("Selected path: ", selectedPath);
         return selectedPath;
+    }
+
+    getDefaultPath(): string | undefined {
+        if (this.parent?.defaultPath && !this.getSelectedPath()) {
+            this.children?.find((child) => child.label === 'Default Project Path')?.select();
+            return this.getSelectedPath();
+        } else {
+            return;
+        }
     }
 
     refresh() {
@@ -296,24 +356,32 @@ export class MachineItem extends vscode.TreeItem {
 
 export class MachinePathItem extends vscode.TreeItem {
     parent?: MachineItem;
-
+    path?: string;
     constructor(label: string, parent: MachineItem) {
         super(label);
         this.parent = parent;
+        this.path = label;
         this.contextValue = 'machinePathItem';
         this.tooltip = "Click to select";
         this.command = { command: 'remote-compilation.selectPath', title: 'Select', arguments: [this] };
-        this.iconPath = new vscode.ThemeIcon('debug-breakpoint-data-unverified');
+        this.iconPath = new vscode.ThemeIcon('debug-breakpoint-unverified');
     }
 
     select() {
-        this.parent?.unselectAllPath();
-        this.iconPath = new vscode.ThemeIcon('debug-breakpoint-data-disabled');
-        this.parent?.parent?.setDescription("selected", this);
+        //------------------------------
+        if (this.parent?.status === 'focused') {
+            this.parent.executeCommand(`cd ${this.path?.toString()}`);
+            this.parent?.unselectAllPath();
+            this.iconPath = new vscode.ThemeIcon('debug-breakpoint-disabled');
+            this.parent?.parent?.setDescription("selected", this);
+        } else {
+            vscode.window.showWarningMessage('Cannot select path, machine is not focused');
+        }
+        //------------------------------
     }
 
     unselect() {
-        this.iconPath = new vscode.ThemeIcon('debug-breakpoint-data-unverified');
+        this.iconPath = new vscode.ThemeIcon('debug-breakpoint-unverified');
         this.parent?.parent?.setDescription("", this);
     }
 }

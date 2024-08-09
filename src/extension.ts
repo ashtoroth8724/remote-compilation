@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { TreeMachine, MachineItem, MachineList, MachinePathItem} from './treeMachine';
+import { TreeMachine, MachineItem, MachinePathItem} from './treeMachine';
 import { register } from 'module';
 import {TreeMacro, MacroItem, MacroList, MacroLocal, MacroBuild, MacroRemote} from './treeMacro';
 import * as path from 'path';
@@ -73,41 +73,24 @@ export function activate(context: vscode.ExtensionContext) {
         await treeMacro.removeMacro(macro);
         treeMacro.refresh();
     });
-    vscode.commands.registerCommand('remote-compilation.cleanMacro', (macro: MacroItem) => {
-        if (macro instanceof MacroBuild) {
-            const focusedMachine = treeMachine.getFocused();
-            if (focusedMachine) {
-                macro.clean(focusedMachine);
-            } else {
-                vscode.window.showErrorMessage("No machine focused to clean the macro on");
-            }
+
+
+    async function runMacroBuild(macro: MacroItem, type:string){
+        if (macro instanceof MacroBuild){
+            await macro.run(undefined, treeMachine, type);
         } else {
-            vscode.window.showErrorMessage("Cannot clean a non Build Macro");
+            vscode.window.showErrorMessage("The macro is not a build macro");
         }
+    }
+
+    vscode.commands.registerCommand('remote-compilation.cleanMacro', async (macro: MacroItem) => {
+        await runMacroBuild(macro, "clean");
     });
-    vscode.commands.registerCommand('remote-compilation.cleanAndBuildMacro', (macro: MacroItem) => {
-        if (macro instanceof MacroBuild) {
-            const focusedMachine = treeMachine.getFocused();
-            if (focusedMachine) {
-                macro.cleanAndBuild(focusedMachine);
-            } else {
-                vscode.window.showErrorMessage("No machine focused to clean the macro on");
-            }
-        } else {
-            vscode.window.showErrorMessage("Cannot clean and build a non Build Macro");
-        }
+    vscode.commands.registerCommand('remote-compilation.cleanAndBuildMacro', async (macro: MacroItem) => {
+        await runMacroBuild(macro, "cleanAndBuild");
     });
-    vscode.commands.registerCommand('remote-compilation.buildMacro', (macro: MacroItem) => {
-        if (macro instanceof MacroBuild) {
-            const focusedMachine = treeMachine.getFocused();
-            if (focusedMachine) {
-                macro.build(focusedMachine);
-            } else {
-                vscode.window.showErrorMessage("No machine focused to clean the macro on");
-            }
-        } else {
-            vscode.window.showErrorMessage("Cannot clean and build a non Build Macro");
-        }
+    vscode.commands.registerCommand('remote-compilation.buildMacro', async (macro: MacroItem) => {
+        await runMacroBuild(macro, "build");
     });
 
 

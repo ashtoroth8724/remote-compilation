@@ -42,7 +42,14 @@ export class TreeMacro implements vscode.TreeDataProvider<vscode.TreeItem> {
                 }
                 log(`Adding macro "${macro.name}": "${macro.command}" to group "${macro.group}"`);
                 if (macro.group === "build") {
-                    macroBuildList.addChild(new MacroBuild(macro.name, macro.command, macroBuildList, macro.subPath, macro.cleanCommand));
+                    const macroBuild = new MacroBuild(macro.name, macro.command, macroBuildList, macro.subPath, macro.cleanCommand);
+                    if (macro.buildMachineIP) {
+                        macroBuild.buildMachineIP = macro.buildMachineIP;
+                    }
+                    if (macro.makefileName) {
+                        macroBuild.makefileName = macro.makefileName;
+                    }
+                    macroBuildList.addChild(macroBuild);
                 } else if (macro.group === "remote") {
                     macroRemoteList.addChild(new MacroRemote(macro.name, macro.command, macroRemoteList));
                 } else if (macro.group === "local") {
@@ -70,9 +77,9 @@ export class TreeMacro implements vscode.TreeDataProvider<vscode.TreeItem> {
         this._onDidChangeTreeData.fire(item);
     }
 
-    getMacros():  { name: string, command: string, group: string, cleanCommand: string, subPath: string }[] {
+    getMacros():  { name: string, command: string, group: string, cleanCommand: string, subPath: string , buildMachineIP: string, makefileName: string}[] {
         const config = vscode.workspace.getConfiguration("remote-compilation");
-        const macros: { name: string, command: string, group: string, cleanCommand: string, subPath: string }[] = config.get('macros', []);
+        const macros: { name: string, command: string, group: string, cleanCommand: string, subPath: string , buildMachineIP: string, makefileName: string}[] = config.get('macros', []);
         log('Macros found:', macros);
         return macros;
     }
@@ -149,7 +156,7 @@ export class MacroList extends vscode.TreeItem {
 }
 
 export interface MacroItem extends vscode.TreeItem {
-    run(machine: MachineItem | undefined): void;
+    run(machine?: MachineItem | undefined, machines?: TreeMachine | undefined, type?: string | undefined): void;
     getCommand(): string;
 }
 
@@ -190,6 +197,8 @@ export class MacroBuild extends vscode.TreeItem implements MacroItem {
     buildArg: string;
     cleanArg?: string;
     subPath?: string;
+    buildMachineIP?: string;
+    makefileName?: string;
     constructor(label: string, buildArg: string, parent: MacroList, subPath?: string, cleanArg?: string) {
         super(label);
         this.buildArg = buildArg;
@@ -206,70 +215,63 @@ export class MacroBuild extends vscode.TreeItem implements MacroItem {
         }
     }
 
-    run(machine: MachineItem): void {
-        this.build(machine);
-    }
-
-    build(machine: MachineItem): void {
-        if (machine) {
-            const pathProject = machine.getSelectedPath();
-            if (pathProject) {
-                if (this.subPath) {
-                    machine.executeCommand(`make -C ${pathProject}/${this.subPath} ${this.buildArg}`);
-                } else {
-                    machine.executeCommand(`make -C ${pathProject} ${this.buildArg}`);
-                }
-            } else {
-                vscode.window.showErrorMessage("No path selected");
-            }
-        } else {
-            vscode.window.showErrorMessage("No machine selected");
-        }
-    }
-
-
-    clean(machine: MachineItem): void {
-        if (this.cleanArg) {
-            if (machine) {
-                const pathProject = machine.getSelectedPath();
-                if (pathProject) {
-                    if (this.subPath) {
-                        machine.executeCommand(`make -C ${pathProject}/${this.subPath} ${this.cleanArg}`);
-                    } else {
-                        machine.executeCommand(`make -C ${pathProject} ${this.cleanArg}`);
-                    }
-                } else {
-                    vscode.window.showErrorMessage("No path selected");
-                }
-            } else {
-                vscode.window.showErrorMessage("No machine selected");
-            }
-        } else {
+    async run(machine?: undefined, machines?: TreeMachine | undefined, type?: string | undefined): Promise<void> {
+        if (!this.cleanArg && (type === "clean" || type === "cleanAndBuild")) {
             vscode.window.showErrorMessage("No clean command defined");
-        }
-    }
-
-    cleanAndBuild(machine: MachineItem): void {
-        if (this.cleanArg) {
-            if (machine) {
-                const pathProject = machine.getSelectedPath();
-                if (pathProject) {
-                    if (this.subPath) {
-                        machine.executeCommand(`make -C ${pathProject}/${this.subPath} ${this.cleanArg}; make -C ${pathProject}/${this.subPath} ${this.buildArg}`);
-                    } else {
-                        machine.executeCommand(`make -C ${pathProject} ${this.cleanArg}; make -C ${pathProject} ${this.buildArg}`);
-                    }
-                } else {
-                    vscode.window.showErrorMessage("No path selected");
+            return;
+        } else if (machines && (type === "build" || type === "cleanAndBuild" || type === "clean")) {
+            let machine: MachineItem | undefined;
+            let terminal: vscode.Terminal | undefined;
+            if (this.buildMachineIP) {
+                machine = machines.getMachineFromIP(this.buildMachineIP);
+                if (!machine) {
+                    vscode.window.showErrorMessage(`No machine with IP ${this.buildMachineIP}`);
+                    return;
                 }
+                await machine.toggleConnect();
+                if (!machine.getSelectedPath() && machines.defaultPath) {
+                    machine.getDefaultPath();
+                }
+                if (!machine.getSelectedPath()) {
+                    vscode.window.showErrorMessage("No path selected");
+                    return;
+                }
+                terminal = machine.terminal;
             } else {
-                vscode.window.showErrorMessage("No machine selected");
+                // running build loccally
+                terminal = vscode.window.terminals.find(terminal => terminal.name === "Remote Compilation");
+                if (!terminal) {
+                    terminal = vscode.window.createTerminal("Remote Compilation");
+                }
             }
-        } else {
-            vscode.window.showErrorMessage("No clean command defined");
+            if (!terminal) {
+                vscode.window.showErrorMessage("No terminal found");
+                return;
+            }
+            terminal.show();
+            terminal.sendText(this.getMakeCommand(type));
         }
     }
 
+    getMakeCommand(type: string): string {
+        let commandString = "make";
+        if (this.subPath) {
+            commandString = `${commandString} -C ${this.subPath}`;
+        }
+        if (this.makefileName) {
+            commandString = `${commandString} -f ${this.makefileName}`;
+        }
+        if (type === "clean") {
+            commandString = `${commandString} ${this.cleanArg}`;
+        } else if (type === "build") {
+            commandString = `${commandString} ${this.buildArg}`;
+        } else if (type === "cleanAndBuild") {
+            commandString = `${commandString} ${this.cleanArg}; ${commandString} ${this.buildArg}`;
+        } else {
+            commandString = "";
+        }
+        return commandString;
+    }
 
     getCommand(): string {
         return this.buildArg;
