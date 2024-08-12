@@ -1,10 +1,10 @@
-# remote-compilation README
+# ![alt text](ressources/images/icon/logo-extension.png) remote-compilation README
 
 Remote Compilation is a VSCode extension I developed during my internship at **IN-Core Systèmes**. Its objective is to reproduce part of Netbeans' functionalities we were using to Compile C/C++ over a Virtual machine. \
 The extension aims to easily share compilation configs and macros among collaborators based on a workspace, but keep the machine configs proper to a user.
 
 ## Table of Content
-- [remote-compilation README](#remote-compilation-readme)
+- [ remote-compilation README](#-remote-compilation-readme)
   - [Table of Content](#table-of-content)
   - [Features](#features)
     - [Machines](#machines)
@@ -12,9 +12,11 @@ The extension aims to easily share compilation configs and macros among collabor
     - [Build Macros](#build-macros)
     - [Default Paths](#default-paths)
   - [Extension Settings](#extension-settings)
+  - [Examples](#examples)
+    - [.code-workspace Template](#code-workspace-template)
+    - [settings.json template (User)](#settingsjson-template-user)
   - [Known Issues](#known-issues)
   - [Release Notes](#release-notes)
-    - [1.0.0](#100)
   - [Links](#links)
 
 
@@ -33,42 +35,89 @@ If you have any requirements or dependencies, add a section describing those and
 -->
 ## Extension Settings
 
-- `remote-compilation.machines`: Intended to be placed in user settings. They are the machines to run the macros on
-  - `name`: The name of the Machine (for display only)
-  - `paths`: a list of the project path on the machine (in case the default project path does not fit you)
-  - `user`: the user to connect to on the remote machine
-  - `ip`: the ip or host of the machine
-  - `port`: the port of the machine to connect to (22 by default)
-  - `password`: the password of the machine (<ins>/!\\</ins> IT IS HIGHLY RECOMMENDED TO USE RSA KEYS <ins>/!\\</ins>)
-- `remote-compilation.macros`: Intended to be placed in user settings. They are the macro to run
-  - `name`: The name of the Macro (for display only)
-  - `group`: the type of the macro [`build`, `local`, `remote`, `vscode`]
-  - For build macros:
-    - `command`: the build argument of your makefile
-    - `cleanCommand`: the clean argument of your makefile
-    - `subPath`: the path to your makefile (according to your project root defined in the machine)
-    - `buildMachineIP`: the machine IP to build on (run locally if not specified)
-    - `makefileName`: the name of the makefile (standard `makefile` if not specified)
-  - for local and remote macros:
-    - `command`: the command to execute (in your local or machine terminal)
-  - for vscode macros:
-    - `command`: the vscode command to execute (`workbench.action.reloadWindow` for example reload vscode's window)
-- `remote-compilation.remoteRoot`: Intended to be placed in user settings, it is intended to be the root folder (or shared folder) on the VM. The extension uses it in combination with `remote-compilation.remoteProjectPath` to generate the default path.
-- `remote-compilation.remoteProjectPath`: Intended to be placed in the workspace settings, it is the path to the project from the VM root. The extension uses it in combination with `remote-compilation.remoteRoot` to generate the default path.
-- `remote-compilation.disablePasswordWarnings`: You should always consider to use RSA keys to secure your SSH connection ([follow this tutorial](https://kb.iu.edu/d/aews)), but just in case you can't and don't be annoyed by pop-ups, here is a workaround.
+- `remote-compilation.machines`: The machines to run the macros on
+- `remote-compilation.macros`: The macros to run.
+- `remote-compilation.remoteRoot`: The root folder (or shared folder) on the VM.
+- `remote-compilation.remoteProjectPath`: The path to the project from the VM root.
+- `remote-compilation.disablePasswordWarnings`: Just in case you can't and don't be annoyed by pop-ups, here is a workaround.
+
+see more details on settings [here](extension-settings.md)
+
+## Examples
+### .code-workspace Template
+This is a settings template/example you can use for your workspaceName.code-workspace file.
+```
+{
+    "extensions": {
+        "recommendations": [
+            "ashtoroth.remote-compilation"
+        ]
+    },
+    "folders": [
+        {
+            "path": "."
+        }
+    ],
+    "settings": {
+        // Macros added to the workspace will end up here
+        // you can change their name and/or the order in which they are displayed
+        "remote-compilation.macros": [
+            {
+                "name": "Windows",
+                "command": "all",
+                "group": "build",
+                "makefileName": "makefilewindows",
+                "buildMachineIP": "192.168.56.111",
+                "cleanCommand": "clean",
+                "subPath": "src"
+            },
+            {
+                "name": "Reload VSCode window",
+                "command": "workbench.action.reloadWindow",
+                "group": "vscode"
+            },
+            {
+                "name": "Hello Local",
+                "command": "echo 'Hello from local terminal!'",
+                "group": "local"
+            },
+            {
+                "name": "Hello Remote",
+                "command": "echo 'Hello from remote terminal!'",
+                "group": "remote"
+            }
+        ],
+        //This setting will be used to determine the remote project path
+        "remote-compilation.default.remoteProjectPath": "project1",
+    }
+}
+```
+### settings.json template (User)
+This is a settings example for settings.json (user)
+```
+{
+    "remote-compilation.default.remoteRoot": "/root/projects",
+    "remote-compilation.machines": [
+        {
+            "name": "Raspberry Pi",
+            "user": "pi",
+            "ip": "192.168.0.100",
+            "paths": [
+                "/root/projects/specialProject",
+            ],
+            "port": 22,
+            "password": "raspberry"
+        }
+    ],
+}
+```
 
 ## Known Issues
 
 - The Extension cannot read the output of the terminal, neither the time it takes to run a command. This causes "run all build macros" not to work every time, especially if the build are long
 
 ## Release Notes
-
-Users appreciate release notes as you update your extension.
-
-### 1.0.0
-
-Initial release of ...
-
+see changelog [here](CHANGELOG.md)
 
 
 ## Links
