@@ -1,7 +1,8 @@
 import { log } from 'console';
 import path from 'path';
 import * as vscode from 'vscode';
-import { TreeMachine, MachineItem, MachineList, MachinePathItem} from './treeMachine';
+import { TreeMachine, MachineItem, MachinePathItem} from './treeMachine';
+import { openSettings } from './extension';
 
 
 export class TreeMacro implements vscode.TreeDataProvider<vscode.TreeItem> {
@@ -27,10 +28,13 @@ export class TreeMacro implements vscode.TreeDataProvider<vscode.TreeItem> {
         const items: vscode.TreeItem[] = [];        
         const macroBuildList = new MacroList("Build Macros");
         macroBuildList.iconPath = new vscode.ThemeIcon('run-below');
+        macroBuildList.contextValue = "buildMacroList";
         const macroRemoteList = new MacroList("Remote Macros");
         macroRemoteList.iconPath = new vscode.ThemeIcon('vm');
         const macroLocalList = new MacroList("Local Macros");
         macroLocalList.iconPath = new vscode.ThemeIcon('terminal');
+        const macroVSCodeList = new MacroList("VSCode Macros");
+        macroVSCodeList.iconPath = new vscode.ThemeIcon('code');
         const macros = this.getMacros();
         if (macros.length > 0) {
             macros.forEach(macro => {
@@ -40,29 +44,34 @@ export class TreeMacro implements vscode.TreeDataProvider<vscode.TreeItem> {
                 } else if (!macro.name) {
                     macro.name = macro.command;
                 }
-                log(`Adding macro "${macro.name}": "${macro.command}" to group "${macro.group}"`);
+                log(`Adding macro "${macro.name}": "${macro.command}" to group "${macro.group}"`, macro);
                 if (macro.group === "build") {
-                    const macroBuild = new MacroBuild(macro.name, macro.command, macroBuildList, macro.subPath, macro.cleanCommand);
-                    if (macro.buildMachineIP) {
-                        macroBuild.buildMachineIP = macro.buildMachineIP;
-                    }
-                    if (macro.makefileName) {
-                        macroBuild.makefileName = macro.makefileName;
-                    }
+                    const macroBuild = new MacroBuild(macro.name, macro.command, macroBuildList, macro.subPath, macro.cleanCommand, macro.buildMachineIP, macro.makefileName);
                     macroBuildList.addChild(macroBuild);
                 } else if (macro.group === "remote") {
                     macroRemoteList.addChild(new MacroRemote(macro.name, macro.command, macroRemoteList));
                 } else if (macro.group === "local") {
                     macroLocalList.addChild(new MacroLocal(macro.name, macro.command, macroLocalList));
+                } else if (macro.group === "vscode") {
+                    macroVSCodeList.addChild(new MacroVSCode(macro.name, macro.command, macroVSCodeList));
                 } else {
-                    console.log(`Macro ${macro.name} has an unkown group: ${macro.group}`);
+                    console.log(`Macro ${macro.name} has an unknown group: ${macro.group}`);
                 }
             });
         }
 
-        items.push(macroLocalList);
-        items.push(macroBuildList);
-        items.push(macroRemoteList);
+        if (macroLocalList.children && macroLocalList.children.length > 0) {
+            items.push(macroLocalList);
+        }
+        if (macroBuildList.children && macroBuildList.children.length > 0) {
+            items.push(macroBuildList);
+        }
+        if (macroRemoteList.children && macroRemoteList.children.length > 0) {
+            items.push(macroRemoteList);
+        }
+        if (macroVSCodeList.children && macroVSCodeList.children.length > 0) {
+            items.push(macroVSCodeList);
+        }
 
         return items;
     }
@@ -85,38 +94,68 @@ export class TreeMacro implements vscode.TreeDataProvider<vscode.TreeItem> {
     }
 
     async addMacro(macroList: MacroList | undefined) {
-        const macroCommand = await vscode.window.showInputBox({ prompt: "Enter the command to execute" });
         let macroType: string | undefined;
-        if (macroList?.label === "Local Macros") {
-            macroType = "local";
-        } else if (macroList?.label === "Remote Macros") {
-            macroType = "remote";
-        } else if (macroList?.label === "Build Macros") {
-            macroType = "build";
+        if (!macroList) {
+            macroType = await vscode.window.showQuickPick(["local", "remote", "build", "vscode"], { placeHolder: "Select the type of macro" });
         }
-        if (!macroType) {
-            macroType = await vscode.window.showQuickPick(["local", "remote", "build"], { placeHolder: "Select the type of macro" });
+        let macroCommand: string | undefined;
+        let subPathIn: string | undefined;
+        let cleanCommandIn: string | undefined;
+        let buildMachineIPIn: string | undefined;
+        let makefileNameIn: string | undefined;
+        if (macroList?.label === "Local Macros" || macroType === "local") {
+            macroType = "local";
+            macroCommand = await vscode.window.showInputBox({ prompt: "Enter the local terminal command to execute" });
+        } else if (macroList?.label === "Remote Macros" || macroType === "remote") {
+            macroType = "remote";
+            macroCommand = await vscode.window.showInputBox({ prompt: "Enter the remote terminal command to execute" });
+        } else if (macroList?.label === "Build Macros" || macroType === "build") {
+            macroType = "build";
+            macroCommand = await vscode.window.showInputBox({ prompt: "Enter the build command to execute" });
+            subPathIn = await vscode.window.showInputBox({ prompt: "Enter the sub-path to build in, press enter for None" });
+            cleanCommandIn = await vscode.window.showInputBox({ prompt: "Enter the clean command to execute, press enter for None" });
+            buildMachineIPIn = await vscode.window.showInputBox({ prompt: "Enter the IP of the machine to build on, press enter for local" });
+            makefileNameIn = await vscode.window.showInputBox({ prompt: "Enter the makefile name, press enter for None" });
+        } else if (macroList?.label === "VSCode Macros" || macroType === "vscode") {
+            macroType = "vscode";
+            macroCommand = await vscode.window.showInputBox({ prompt: "Enter the VSCode command to execute" });
         }
         if (macroCommand && macroType) {
             const config = vscode.workspace.getConfiguration("remote-compilation");
             let configInfo = config.inspect('macros');
-            let macros: { name: string, command: string, group: string }[] = config.get('macros', []);
+            let macros = this.getMacros() as 
+                        ({ name: string, command: string, group: string, cleanCommand: string, subPath: string , buildMachineIP: string, makefileName: string} |
+                        {name: string, command: string, group: string})[];
             if (!Array.isArray(macros)) {
                 macros = [];
             }
-            macros.push({name: macroCommand, command: macroCommand, group: macroType });
+
+            if (macroType !== "build") {
+                macros.push({name: macroCommand, command: macroCommand, group: macroType});
+            } else {
+                macros.push({name: macroCommand, command: macroCommand, group: macroType, cleanCommand: cleanCommandIn || "", subPath: subPathIn || "", buildMachineIP: buildMachineIPIn || "", makefileName: makefileNameIn || "" });
+            }
+            let file: string;
             if (configInfo && configInfo.workspaceValue !== undefined) {
                 await config.update('macros', macros, vscode.ConfigurationTarget.Workspace);
                 console.log('Added macro to workspace:', macroCommand);
+                file = "workspace";
             } else if (configInfo && configInfo.globalValue !== undefined) {
                 await config.update('macros', macros, vscode.ConfigurationTarget.Global);
                 console.log('Added macro to user:', macroCommand);
+                file = "user";
             } else {
                 // Handle case where there are no existing macros
                 await config.update('macros', macros, vscode.ConfigurationTarget.Global);
                 console.log('Added macro to user (default):', macroCommand);
+                file = "user";
             }
             this.refresh();
+            vscode.window.showInformationMessage("Macro added", "See in config (json)").then((value) => {
+                if (value === "See in config (json)") {
+                    openSettings(file);
+                }
+            });
         }
     }
 
@@ -151,6 +190,15 @@ export class MacroList extends vscode.TreeItem {
             this.children = [];
         }
         this.children.push(child);
+    }
+
+    async runAllBuilds(type: string, treeMachine: TreeMachine) {
+        this.children?.forEach(async child => {
+            if (child instanceof MacroBuild) {
+                vscode.window.showInformationMessage(`Running ${child.label}: ${child.getMakeCommand(type)}`);
+                await child.run(undefined, treeMachine, type);
+            }
+        });
     }
 
 }
@@ -199,20 +247,32 @@ export class MacroBuild extends vscode.TreeItem implements MacroItem {
     subPath?: string;
     buildMachineIP?: string;
     makefileName?: string;
-    constructor(label: string, buildArg: string, parent: MacroList, subPath?: string, cleanArg?: string) {
+    constructor(label: string, buildArg: string, parent: MacroList, subPath?: string, cleanArg?: string, buildMachineIP?: string, makefileName?: string) {
         super(label);
         this.buildArg = buildArg;
         this.parent = parent;
         this.contextValue = 'buildItem';
-        this.tooltip = `make ${buildArg}`;
-        if (subPath) {
-            this.subPath = subPath;
-            this.tooltip = `make ${buildArg} in ${subPath}`;
-        }
+        let tooltipString = `----${this.label}----\nBuild Arg: ${buildArg}`;
         if (cleanArg) {
             this.cleanArg = cleanArg;
             this.contextValue = 'buildItemWithClean';
+            tooltipString = `${tooltipString}\nClean Arg: ${cleanArg}`;
         }
+        if (subPath) {
+            this.subPath = subPath;
+            tooltipString = `${tooltipString}\nBuilding in: ${subPath}`;
+        }
+        if (buildMachineIP) {
+            this.buildMachineIP = buildMachineIP;
+            tooltipString = `${tooltipString}\nTarget machine IP: ${this.buildMachineIP}`;
+        } else {
+            tooltipString = `${tooltipString}\nBuilding locally`;
+        }
+        if (makefileName) {
+            this.makefileName = makefileName;
+            tooltipString = `${tooltipString}\nUsing makefile: ${this.makefileName}`;
+        }
+        this.tooltip = tooltipString;
     }
 
     async run(machine?: undefined, machines?: TreeMachine | undefined, type?: string | undefined): Promise<void> {
@@ -238,7 +298,7 @@ export class MacroBuild extends vscode.TreeItem implements MacroItem {
                 }
                 terminal = machine.terminal;
             } else {
-                // running build loccally
+                // running build locally
                 terminal = vscode.window.terminals.find(terminal => terminal.name === "Remote Compilation");
                 if (!terminal) {
                     terminal = vscode.window.createTerminal("Remote Compilation");
@@ -295,6 +355,26 @@ export class MacroRemote extends vscode.TreeItem implements MacroItem {
         } else {
             vscode.window.showErrorMessage("No machine selected");
         }
+    }
+
+    getCommand(): string {
+        return this.commandString;
+    }
+}
+
+export class MacroVSCode extends vscode.TreeItem implements MacroItem {
+    parent?: MacroList;
+    commandString: string;
+    constructor(label: string, commandString: string, parent: MacroList) {
+        super(label);
+        this.commandString = commandString;
+        this.parent = parent;
+        this.contextValue = 'macroItem';
+        this.tooltip = commandString;
+    }
+
+    run(): void {
+        vscode.commands.executeCommand(this.commandString);
     }
 
     getCommand(): string {

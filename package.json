@@ -1,4 +1,8 @@
 {
+  "publisher": "ashtoroth",
+  "repository": {
+    "private": true
+  },
   "name": "remote-compilation",
   "displayName": "Remote Compilation & Macros",
   "description": "",
@@ -58,7 +62,7 @@
       {
         "command": "remote-compilation.runMacro",
         "title": "Run Macro",
-        "icon": "$(run)"
+        "icon": "$(debug-start)"
       },
       {
         "command": "remote-compilation.refreshTreeMacro",
@@ -78,17 +82,37 @@
       {
         "command": "remote-compilation.cleanMacro",
         "title": "Clean",
-        "icon": "ressources/icons/dark/clean.svg"
+        "icon": "$(debug-stop)"
       },
       {
         "command": "remote-compilation.cleanAndBuildMacro",
         "title": "Clean & Build",
-        "icon": "ressources/icons/dark/cleanAndBuild.svg"
+        "icon": "$(debug-continue)"
       },
       {
         "command": "remote-compilation.buildMacro",
         "title": "Build",
-        "icon": "ressources/icons/dark/build.svg"
+        "icon": "$(debug-start)"
+      },
+      {
+        "command": "remote-compilation.disablePasswordWarning",
+        "title": "Disable Password Warnings",
+        "icon": "$(circle-slash)"
+      },
+      {
+        "command": "remote-compilation.cleanAllMacro",
+        "title": "Run all clean macros",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "remote-compilation.buildAllMacro",
+        "title": "Run all build macros",
+        "icon": "$(debug-start)"
+      },
+      {
+        "command": "remote-compilation.cleanAndBuildAllMacro",
+        "title": "Run all clean & build macros",
+        "icon": "$(debug-continue)"
       }
     ],
     "viewsContainers": {
@@ -213,13 +237,53 @@
           "command": "remote-compilation.cleanMacro",
           "when": "viewItem == buildItemWithClean",
           "group": "inline@1"
+        },
+        {
+          "command": "remote-compilation.addMacro",
+          "when": "viewItem == buildMacroList",
+          "group": "z_commands"
+        },
+        {
+          "command": "remote-compilation.addMacro",
+          "when": "viewItem == buildMacroList",
+          "group": "inline@4"
+        },
+        {
+          "command": "remote-compilation.buildAllMacro",
+          "when": "viewItem == buildMacroList",
+          "group": "a_commands"
+        },
+        {
+          "command": "remote-compilation.buildAllMacro",
+          "when": "viewItem == buildMacroList",
+          "group": "inline@3"
+        },
+        {
+          "command": "remote-compilation.cleanAndBuildAllMacro",
+          "when": "viewItem == buildMacroList",
+          "group": "a_commands"
+        },
+        {
+          "command": "remote-compilation.cleanAndBuildAllMacro",
+          "when": "viewItem == buildMacroList",
+          "group": "inline@2"
+        },
+        {
+          "command": "remote-compilation.cleanAllMacro",
+          "when": "viewItem == buildMacroList",
+          "group": "a_commands"
+        },
+        {
+          "command": "remote-compilation.cleanAllMacro",
+          "when": "viewItem == buildMacroList",
+          "group": "inline@1"
         }
       ],
       "view/title": [
         {
           "command": "remote-compilation.refreshTreeMacro",
           "when": "view == remote-macros",
-          "group": "navigation"
+          "group": "navigation@1"
         },
         {
           "command": "remote-compilation.refreshTreeMachine",
@@ -229,6 +293,11 @@
         {
           "command": "remote-compilation.addMachine",
           "when": "view == remote-machines",
+          "group": "navigation@2"
+        },
+        {
+          "command": "remote-compilation.addMacro",
+          "when": "view == remote-macros",
           "group": "navigation@2"
         }
       ]
@@ -293,7 +362,7 @@
               },
               "group": {
                 "type": "string",
-                "description": "Type of the macro, supported groups: 'build', 'remote', 'local'"
+                "description": "Type of the macro, supported groups: 'build', 'remote', 'local', 'vscode'"
               },
               "cleanCommand": {
                 "type": "string",
@@ -328,6 +397,10 @@
         "remote-compilation.default.remoteProjectPath": {
           "type": "string",
           "description": "Default remote project path (relative to the remote root)"
+        },
+        "remote-compilation.disablePasswordWarnings": {
+          "type": "boolean",
+          "description": "Disable password warnings"
         }
       }
     }
@@ -352,6 +425,6 @@
   },
   "dependencies": {
     "appdata-path": "^1.0.0",
-    "ping": "^0.4.4"
+    "node-ssh": "^13.2.0"
   }
 }

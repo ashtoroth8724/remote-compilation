@@ -1,9 +1,8 @@
 // treeMachine.ts
 import * as vscode from 'vscode';
-import * as ping from 'ping';
 import * as path from 'path';
 import { get } from 'http';
-
+import { error } from 'console';
 
 function sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -15,6 +14,7 @@ export class TreeMachine implements vscode.TreeDataProvider<vscode.TreeItem> {
     children: MachineItem[] | undefined;
     defaultPath?: string;
     defaultMachine?: MachineItem;
+    disablePasswordWarnings: boolean = false;
 
 
     getTreeItem(element: vscode.TreeItem): vscode.TreeItem {
@@ -23,7 +23,7 @@ export class TreeMachine implements vscode.TreeDataProvider<vscode.TreeItem> {
 
     getChildren(element?: vscode.TreeItem): Thenable<vscode.TreeItem[]> {
         console.log('getChildren called with element:', element);
-        ({path: this.defaultPath, machine: this.defaultMachine} = this.getDefault());
+        this.defaultPath = this.getDefaultProjectPath();
         if (element instanceof MachineItem) {
             console.log('Returning children of MachineItem:', element.children);
             return Promise.resolve(element.children || []);
@@ -34,6 +34,9 @@ export class TreeMachine implements vscode.TreeDataProvider<vscode.TreeItem> {
     }
     
     private getItems(): vscode.TreeItem[] {
+        this.disablePasswordWarnings = this.getDisableWarningsSetting() || false;
+        console.log('Disable password warning:', this.disablePasswordWarnings);
+
         console.log('getItems called');
         const items: vscode.TreeItem[] = [];
         const machines = this.getMachines();
@@ -41,22 +44,19 @@ export class TreeMachine implements vscode.TreeDataProvider<vscode.TreeItem> {
             let machineItem: MachineItem;
             if (machine.name && machine.user && machine.ip) {
                 machineItem = new MachineItem(machine.name, this);
-                machineItem.tooltip = `${machine.user}@${machine.ip}`;
-                machineItem.ip = machine.ip;
             } else if (machine.user && machine.ip) {
                 machineItem = new MachineItem(`${machine.user}@${machine.ip}`, this);
-                machineItem.ip = machine.ip;
             } else {
                 console.error('Machine has no ip and user:', machine);
                 return;
             }
             machineItem.ip = machine.ip;
             machineItem.user = machine.user;
+            machineItem.tooltip = `----${machineItem.label}----\nIP: ${machineItem.ip}\nUser: ${machineItem.user}`;
             if (this.defaultPath) {
                 console.log('Adding default path:', this.defaultPath);
                 const defaultPath = new MachinePathItem(this.defaultPath, machineItem);
                 defaultPath.label = 'Default Project Path';
-                defaultPath.tooltip = this.defaultPath;
                 machineItem.addChild(defaultPath);
             }
 
@@ -67,14 +67,24 @@ export class TreeMachine implements vscode.TreeDataProvider<vscode.TreeItem> {
                 });
             }
             if (machine.port) {
-                machineItem.port = machine.port.toString();
+                machineItem.port = machine.port;
+                machineItem.tooltip += `\nPort: ${machineItem.port}`;
             }
             if (machine.password) {
                 machineItem.password = machine.password;
-                if (machine.name) {
-                    vscode.window.showWarningMessage(`Security Risk: Password for "${machine.name}" is stored in plain text, you should try to use RSA keys instead`);
-                } else if (`${machine.user}@${machine.ip}`) {
-                    vscode.window.showWarningMessage(`Security Risk: Password for "${`${machine.user}@${machine.ip}`}" is stored in plain text, you should try to use RSA keys instead`);
+                machineItem.tooltip += `\nPassword: ${machineItem.password}`;
+                if (machine.name && !this.disablePasswordWarnings) {
+                    vscode.window.showWarningMessage(`Security Risk: Password for "${machine.name}" is stored in plain text, you should try to use RSA keys instead`, "Ok", "Don't show again").then((value) => {
+                        if (value === "Don't show again") {
+                            vscode.commands.executeCommand('remote-compilation.disablePasswordWarnings');
+                        }
+                    });
+                } else if (`${machine.user}@${machine.ip}` && !this.disablePasswordWarnings) {
+                    vscode.window.showWarningMessage(`Security Risk: Password for "${`${machine.user}@${machine.ip}`}" is stored in plain text, you should try to use RSA keys instead`, "Ok", "Don't show again").then((value) => {
+                        if (value === "Don't show again") {
+                            vscode.commands.executeCommand('remote-compilation.disablePasswordWarnings');
+                        }
+                    });
                 }                
             }
             items.push(machineItem);
@@ -91,12 +101,20 @@ export class TreeMachine implements vscode.TreeDataProvider<vscode.TreeItem> {
             placeHolder: 'user@ip',
         });
         if (!userIP) {
-            vscode.window.showErrorMessage('Invalid machine name, please enter a valid user@ip');
+            vscode.window.showErrorMessage('Invalid machine name, please enter a valid user@ip', "Retry", "Ignore").then((value) => {
+                if (value === "Retry") {
+                    this.addMachine();
+                }
+            });
             return;
         }
         let [user, ip] = userIP.split('@');
         if (!user || !ip) {
-            vscode.window.showErrorMessage('Invalid machine name, please enter a valid user@ip');
+            vscode.window.showErrorMessage('Invalid machine name, please enter a valid user@ip', "Retry", "Ignore").then((value) => {
+                if (value === "Retry") {
+                    this.addMachine();
+                }
+            });
             return;
         }
         console.log('Adding machine:', userIP);
@@ -105,6 +123,7 @@ export class TreeMachine implements vscode.TreeDataProvider<vscode.TreeItem> {
         machines.push({ name: userIP, paths: [], port: 22, password: '', ip: ip, user: user });
         await config.update('machines', machines, vscode.ConfigurationTarget.Global);
         console.log('Machine added to configuration:', machines);
+        this.refresh();
     }
 
     async removeMachine(machineItem: MachineItem) {
@@ -188,20 +207,7 @@ export class TreeMachine implements vscode.TreeDataProvider<vscode.TreeItem> {
     getFocused() {
         return this.children?.find((child) => child.status === 'focused');
     }
-    getDefault(): {path: string | undefined, machine: MachineItem | undefined} {
-        const defaultMachineIP = vscode.workspace.getConfiguration("remote-compilation").get('default.buildMachineIP');
-        const defaultMachine = this.children?.find((child) => child.ip === defaultMachineIP);
-        if (defaultMachine) {
-            if (!defaultMachine.label?.toString().endsWith(' (default)')) {
-                defaultMachine.label = defaultMachine.label + ' (default)';
-                if (defaultMachine.description) {
-                    this.setDescription(defaultMachine.description?.toString(), defaultMachine);
-                }
-            }
-        }
-        const defaultPath = this.getDefaultProjectPath();
-        return { path: defaultPath, machine: defaultMachine };
-    }
+
     getDefaultProjectPath(): string | undefined {
         const config = vscode.workspace.getConfiguration("remote-compilation");
         const remoteRoot: string | undefined = config.get("default.remoteRoot");
@@ -221,6 +227,12 @@ export class TreeMachine implements vscode.TreeDataProvider<vscode.TreeItem> {
             }
         });
     }
+
+    getDisableWarningsSetting(): boolean | undefined {
+        const config = vscode.workspace.getConfiguration("remote-compilation");
+        const disablePasswordWarnings: boolean | undefined = config.get("disablePasswordWarnings");
+        return disablePasswordWarnings;
+    }
 }
 
 export class MachineItem extends vscode.TreeItem {
@@ -231,7 +243,7 @@ export class MachineItem extends vscode.TreeItem {
     children?: MachinePathItem[];
     status: string = 'offline';
     ip?: string;
-    port?: string;
+    port?: number;
     password?: string;
     user?: string;
 
@@ -242,8 +254,7 @@ export class MachineItem extends vscode.TreeItem {
         this.description = this.status;
         this.iconPath = new vscode.ThemeIcon('vm');
         this.contextValue = 'machineItem';
-        const existingTerminal = vscode.window.terminals.find(terminal => terminal.name === this.label?.toString())
-            || vscode.window.terminals.find(terminal => terminal.name === `${this.label?.toString()} (default)`);
+        const existingTerminal = vscode.window.terminals.find(terminal => terminal.name === this.label?.toString());
         if (existingTerminal) {
             this.terminal = existingTerminal;
             this.status = 'online';
@@ -258,14 +269,29 @@ export class MachineItem extends vscode.TreeItem {
         this.status = 'connecting';
         this.refresh();
 
-        //try to ping the machine to check if it is online
-        const res = await ping.promise.probe(this.ip);
-        if (!res.alive) {
-            vscode.window.showErrorMessage(`Error during connection: Machine "${this.label}" is unreachable`);
+        try {
+            const {NodeSSH} = require('node-ssh');
+            const ssh = new NodeSSH();
+            await ssh.connect({
+                host: this.ip,
+                username: this.user,
+                port: this.port || 22,
+                password: this.password
+            }).catch((err: any) => {
+                throw err;
+            });
+            await ssh.dispose();
+        }catch (err: any | unknown) {
+            vscode.window.showErrorMessage(`Error during connection to ${this.label}${err.message ? `: ${err.message}` : ''}`, 'Retry', 'Ignore').then((value) => {
+                if (value === 'Retry') {
+                    this.connect();
+                }
+            });
             this.status = 'offline';
             this.refresh();
             return;
         }
+        //TODO: find a better way to open a "cleaner" terminal
         this.terminal = vscode.window.createTerminal({ name: this.label?.toString() });
         this.terminal.show();
         if (this.port) {
@@ -362,7 +388,7 @@ export class MachinePathItem extends vscode.TreeItem {
         this.parent = parent;
         this.path = label;
         this.contextValue = 'machinePathItem';
-        this.tooltip = "Click to select";
+        this.tooltip = `${this.path}\nClick to select`;
         this.command = { command: 'remote-compilation.selectPath', title: 'Select', arguments: [this] };
         this.iconPath = new vscode.ThemeIcon('debug-breakpoint-unverified');
     }

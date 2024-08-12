@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { TreeMachine, MachineItem, MachinePathItem} from './treeMachine';
 import { register } from 'module';
-import {TreeMacro, MacroItem, MacroList, MacroLocal, MacroBuild, MacroRemote} from './treeMacro';
+import {TreeMacro, MacroItem, MacroList, MacroLocal, MacroBuild, MacroRemote, MacroVSCode} from './treeMacro';
 import * as path from 'path';
 
 //npm install -S appdata-path
@@ -50,10 +50,10 @@ export function activate(context: vscode.ExtensionContext) {
 
     //commands of treeMacro
     vscode.commands.registerCommand('remote-compilation.runMacro', (macro: MacroItem) => {
-        if (macro instanceof MacroLocal) {
+        if (macro instanceof MacroLocal || macro instanceof MacroVSCode) {
             macro.run();
         } else {
-            // récuperer la machine focus et la passer en argument à run
+            // find the focused machine and gives it to the run function
             const focusedMachine = treeMachine.getFocused();
             if (focusedMachine) {
                 macro.run(focusedMachine);
@@ -92,6 +92,15 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('remote-compilation.buildMacro', async (macro: MacroItem) => {
         await runMacroBuild(macro, "build");
     });
+    vscode.commands.registerCommand('remote-compilation.cleanAllMacro', async (macroList: MacroList) => {
+        await macroList.runAllBuilds("clean", treeMachine);
+    });
+    vscode.commands.registerCommand('remote-compilation.cleanAndBuildAllMacro', async (macroList: MacroList) => {
+        await macroList.runAllBuilds("cleanAndBuild", treeMachine);
+    });
+    vscode.commands.registerCommand('remote-compilation.buildAllMacro', async (macroList: MacroList) => {
+        await macroList.runAllBuilds("build", treeMachine);
+    });
 
 
 
@@ -117,14 +126,17 @@ export function activate(context: vscode.ExtensionContext) {
         }
 
         await openSettings(configType);
-        });
-
+    });
+    vscode.commands.registerCommand('remote-compilation.disablePasswordWarnings', () => {
+        const config = vscode.workspace.getConfiguration("remote-compilation");
+        config.update("disablePasswordWarnings", true, vscode.ConfigurationTarget.Global);
+    });
 }
 
 export function deactivate() {}
 
 
-async function openSettings(configType: string) {
+export async function openSettings(configType: string) {
     let settingsPath: string;
     if (configType === 'user') {
         //path is user/APPDATA/Roaming/Code/User/settings.json
