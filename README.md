@@ -1,4 +1,4 @@
-# ![alt text](ressources/images/icon/logo-extension.png) remote-compilation README
+# ![alt text](./ressources/images/icon/logo-extension-32.png?raw=true) remote-compilation README
 
 Remote Compilation is a VSCode extension I developed during my internship at **IN-Core Systèmes**. Its objective is to reproduce part of Netbeans' functionalities we were using to Compile C/C++ over a Virtual machine. \
 The extension aims to easily share compilation configs and macros among collaborators based on a workspace, but keep the machine configs proper to a user.
@@ -17,6 +17,7 @@ The extension aims to easily share compilation configs and macros among collabor
     - [settings.json template (User)](#settingsjson-template-user)
   - [Known Issues](#known-issues)
   - [Release Notes](#release-notes)
+  - [License](#license)
   - [Links](#links)
 
 
@@ -119,6 +120,9 @@ This is a settings example for settings.json (user)
 ## Release Notes
 see changelog [here](CHANGELOG.md)
 
+## License
+
+This software is under a MIT license, see it [here](LICENSE.md)
 
 ## Links
 **[The Github Project Page](https://github.com/ashtoroth8724/remote-compilation)**\

@@ -22,6 +22,7 @@
       "name": "Sylvain VIAL (tester)"
     }
   ],
+  "icon": "./ressources/images/icon/logo-extension-500.png",
 
 
 
@@ -30,16 +31,24 @@
   "displayName": "Remote Compilation & Macros",
   "description": "A VSCode extension to compile locally or remotely, as well as providing macros",
   "version": "0.0.1",
-
+  "categories": [
+    "Keymaps",
+    "Testing",
+    "Other"
+  ],
+  "keywords": [
+    "remote",
+    "compilation",
+    "macros",
+    "build",
+    "virtual machine"
+  ],
 
 
 
   "engines": {
     "vscode": "^1.92.0"
   },
-  "categories": [
-    "Other"
-  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [

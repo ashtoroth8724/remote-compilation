@@ -6,6 +6,16 @@
     ],
     "settings": {
         "remote-compilation.macros": [
+            {
+                "name": "Package",
+                "command": "vsce package",
+                "group": "local"
+            },
+            {
+                "name": "Publish",
+                "command": "vsce publish",
+                "group": "local"
+            }
         ],
         "cSpell.words": [
             "appdata",
