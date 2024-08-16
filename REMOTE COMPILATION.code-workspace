@@ -17,6 +17,13 @@
                 "group": "local"
             }
         ],
+        "markdown.extension.toc.omittedFromToc": {
+            "README.md" : [
+                "## Table of Contents",
+            ]
+        },
+        "markdown.extension.toc.levels": "2..2",
+        "markdown.extension.toc.updateOnSave": true,
         "cSpell.words": [
             "appdata",
             "ashtoroth"

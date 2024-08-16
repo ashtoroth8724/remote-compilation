@@ -118,7 +118,7 @@ export function activate(context: vscode.ExtensionContext) {
             if (configInfo && configInfo.workspaceValue !== undefined) {
                 configType = "workspace";
             }
-        } else if (item instanceof MacroBuild || item instanceof MacroRemote || item instanceof MacroLocal) {
+        } else if (item instanceof MacroBuild || item instanceof MacroRemote || item instanceof MacroLocal || item instanceof MacroVSCode) {
             const configInfo = config.inspect('macros');
             if (configInfo && configInfo.workspaceValue !== undefined) {
                 configType = "workspace";
