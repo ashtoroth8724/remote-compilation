@@ -1,12 +1,39 @@
 {
   "publisher": "ashtoroth",
   "repository": {
-    "private": true
+    "private": true,
+    "url": "https://github.com/ashtoroth8724/remote-compilation",
+    "type": "git"
   },
+  "license": "MIT",
+  "homepage": "https://github.com/ashtoroth8724/remote-compilation#readme",
+  "author": {
+    "name": "Guillaume BONABAU",
+    "url": "https://github.com/ashtoroth8724"
+  },
+  "contributors": [
+    {
+      "name": "Pierre TOUCHARD (tester)"
+    },
+    {
+      "name": "Abderrahmane MEHENNI (tester)"
+    },
+    {
+      "name": "Sylvain VIAL (tester)"
+    }
+  ],
+
+
+
+
   "name": "remote-compilation",
   "displayName": "Remote Compilation & Macros",
-  "description": "",
+  "description": "A VSCode extension to compile locally or remotely, as well as providing macros",
   "version": "0.0.1",
+
+
+
+
   "engines": {
     "vscode": "^1.92.0"
   },
@@ -120,7 +147,7 @@
         {
           "id": "remote-compilation",
           "title": "Remote Compilation",
-          "icon": "$(terminal)"
+          "icon": "$(file-binary)"
         }
       ]
     },
