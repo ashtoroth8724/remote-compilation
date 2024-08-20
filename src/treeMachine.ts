@@ -235,6 +235,7 @@ export class TreeMachine implements vscode.TreeDataProvider<vscode.TreeItem> {
     }
 }
 
+//TODO: Explore how to send ssh commands and read output with node-ssh and try to implement it
 export class MachineItem extends vscode.TreeItem {
     private _onDidChangeDescription: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
     readonly onDidChangeDescription: vscode.Event<void> = this._onDidChangeDescription.event;
@@ -246,8 +247,9 @@ export class MachineItem extends vscode.TreeItem {
     port?: number;
     password?: string;
     user?: string;
+    terminal?: vscode.Terminal;
 
-    terminal: vscode.Terminal | undefined;
+
     constructor(label: string, parent: TreeMachine) {
         super(label);
         this.parent = parent;

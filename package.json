@@ -30,7 +30,7 @@
   "name": "remote-compilation",
   "displayName": "Remote Compilation & Macros",
   "description": "A VSCode extension to compile locally or remotely, as well as providing macros",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "categories": [
     "Keymaps",
     "Testing",

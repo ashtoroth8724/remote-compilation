@@ -6,13 +6,12 @@ Remote Compilation is a VSCode extension I developed during my internship at **I
 - [Usage](#usage)
 - [Features](#features)
 - [Extension Settings](#extension-settings)
-- [Examples](#examples)
 - [Known Issues](#known-issues)
 - [Release Notes](#release-notes)
 - [Links](#links)
 
 ## Usage
-
+<!--TODO: Add gifs on how to use the extension-->
 
 ## Features
 This extension revolves around 4 features:
@@ -46,9 +45,7 @@ Main settings:
 - `remote-compilation.remoteRoot`: The root folder (or shared folder) on the VM.
 - `remote-compilation.remoteProjectPath`: The path to the project from the VM root.
 
-See more details on extension settings [here](extension-settings.md#description-of-the-settings).
-
-## Examples
+See more details on extension settings [here](extension-settings.md#description-of-the-settings).\
 See settings example [here](extension-settings.md#examples)
 
 ## Known Issues
