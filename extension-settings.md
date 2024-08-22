@@ -1,48 +1,57 @@
 # Remote Compilation JSON Settings
 
-- [description](#description-of-the-settings)
-- [examples](#examples)
+- [Description of the settings](#description-of-the-settings)
+  - [+ `remote-compilation.machines` : list](#-remote-compilationmachines--list)
+  - [+ `remote-compilation.macros`: list](#-remote-compilationmacros-list)
+  - [+ `remote-compilation.remoteRoot` : string](#-remote-compilationremoteroot--string)
+  - [+ `remote-compilation.remoteProjectPath` : string](#-remote-compilationremoteprojectpath--string)
+  - [+ `remote-compilation.disablePasswordWarnings` : boolean](#-remote-compilationdisablepasswordwarnings--boolean)
+- [Examples](#examples)
+  - [+ code-workspace Template](#-code-workspace-template)
+  - [+ settings.json Template (User)](#-settingsjson-template-user)
 
 
 ## Description of the settings
 
-### - `remote-compilation.machines`
+### + `remote-compilation.machines` : list
 Intended to be placed in user settings. They are the machines to run the macros on.
-- `name`: The name of the machine (for display only).
-- `paths`: A list of the project paths on the machine (in case the default project path does not fit you).
-- `user`: The user to connect to on the remote machine.
-- `ip`: The IP or host of the machine.
-- `port`: The port of the machine to connect to (22 by default).
-- `password`: The password of the machine **<ins>/!\\</ins> IT IS HIGHLY RECOMMENDED TO USE RSA KEYS <ins>/!\\</ins>**.
+| Item sub-setting    | Description                                                                                   |
+|---------------------|-----------------------------------------------------------------------------------------------|
+| `name`              | The name of the machine (for display only).                                                   |
+| `paths`             | A list of the project paths on the machine (in case the default project path does not fit you).|
+| `user`              | The user to connect to on the remote machine.                                                 |
+| `ip`                | The IP or host of the machine.                                                                |
+| `port`              | The port of the machine to connect to (22 by default).                                        |
+| `password`          | The password of the machine **<ins>/!\\</ins> IT IS HIGHLY RECOMMENDED TO USE RSA KEYS <ins>/!\\</ins>**.|
 
-### - `remote-compilation.macros`
+### + `remote-compilation.macros`: list
 Intended to be placed in user settings. They are the macros to run.
-- `name`: The name of the macro (for display only).
-- `group`: The type of the macro [`build`, `local`, `remote`, `vscode`].
-- For build macros:
-  - `command`: The build argument of your makefile.
-  - `cleanCommand`: The clean argument of your makefile.
-  - `subPath`: The path to your makefile (according to your project root defined in the machine).
-  - `buildMachineIP`: The machine IP to build on (run locally if not specified).
-  - `makefileName`: The name of the makefile (standard `makefile` if not specified).
-- For local and remote macros:
-  - `command`: The command to execute (in your local or machine terminal).
-- For VS Code macros:
-  - `command`: The VS Code command to execute (`workbench.action.reloadWindow` for example reloads VS Code's window).
+| Item sub-setting    | `group`  | Description                                                                                   |
+|---------------------|----------|-----------------------------------------------------------------------------------------------|
+| `name`              | All      | The name of the macro (for display only).                                                     |
+| `group`             | All      | The type of the macro [`build`, `local`, `remote`, `vscode`].                                 |
+| `command`           | `local`  | The command to execute (in your local or machine terminal).                                   |
+| `command`           | `remote` | The command to execute (in your local or machine terminal).                                   |
+| `command`           | `vscode` | The VS Code command to execute (`workbench.action.reloadWindow` for example reloads VS Code's window). |
+| `command`           | `build`  | The build argument of your makefile.                                                          |
+| `cleanCommand`      | `build`  | The clean argument of your makefile.                                                          |
+| `subPath`           | `build`  | The path to your makefile (according to your project root defined in the machine).            |
+| `buildMachineIP`    | `build`  | The machine IP to build on (run locally if not specified).                                    |
+| `makefileName`      | `build`  | The name of the makefile (`makefile` if not specified).                              |
   
-### - `remote-compilation.remoteRoot`
+### + `remote-compilation.remoteRoot` : string
 Intended to be placed in user settings. It is intended to be the root folder (or shared folder) on the VM. The extension uses it in combination with `remote-compilation.remoteProjectPath` to generate the default path.
 
-### - `remote-compilation.remoteProjectPath`
+### + `remote-compilation.remoteProjectPath` : string
 Intended to be placed in the workspace settings. It is the path to the project from the VM root. The extension uses it in combination with `remote-compilation.remoteRoot` to generate the default path.
 
-### - `remote-compilation.disablePasswordWarnings`
+### + `remote-compilation.disablePasswordWarnings` : boolean
 You should always consider using RSA keys to secure your SSH connection ([follow this tutorial](https://kb.iu.edu/d/aews)), but just in case you can't and don't want to be annoyed by pop-ups, here is a workaround.
 
 ## Examples
 
-### .code-workspace Template
-This is a settings template/example you can use for your workspaceName.code-workspace file.
+### + code-workspace Template
+This is a settings example you can use for your ### + workspace_name.code-workspace file.
 ```json
 {
     "extensions": {
@@ -90,7 +99,7 @@ This is a settings template/example you can use for your workspaceName.code-work
 }
 ```
 
-### settings.json Template (User)
+### + settings.json Template (User)
 This is a settings example for settings.json (user).
 ```json
 {
@@ -109,3 +118,5 @@ This is a settings example for settings.json (user).
     ]
 }
 ```
+> Note: These two examples together will create the "default path": `/root/projects/project1`\
+> [would you like to know more](README.md#-default-paths)
