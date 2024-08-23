@@ -23,10 +23,6 @@
     }
   ],
   "icon": "./ressources/images/icon/logo-extension-500.png",
-
-
-
-
   "name": "remote-compilation",
   "displayName": "Remote Compilation & Macros",
   "description": "A VSCode extension to compile locally or remotely, as well as providing macros",
@@ -43,9 +39,6 @@
     "build",
     "virtual machine"
   ],
-
-
-  
   "engines": {
     "vscode": "^1.92.0"
   },
@@ -149,6 +142,11 @@
         "command": "remote-compilation.cleanAndBuildAllMacro",
         "title": "Run all clean & build macros",
         "icon": "$(debug-continue)"
+      },
+      {
+        "command": "remote-compilation.openTerminal",
+        "title": "Open a terminal",
+        "icon": "$(terminal)"
       }
     ],
     "viewsContainers": {
@@ -198,6 +196,11 @@
           "command": "remote-compilation.addPath",
           "when": "viewItem == machineItem",
           "group": "z_commands"
+        },
+        {
+          "command": "remote-compilation.openTerminal",
+          "when": "viewItem == machineItem",
+          "group": "b_commands"
         },
         {
           "command": "remote-compilation.removePath",
@@ -437,6 +440,10 @@
         "remote-compilation.disablePasswordWarnings": {
           "type": "boolean",
           "description": "Disable password warnings"
+        },
+        "remote-compilation.clearOutputBeforeExecution": {
+          "type": "boolean",
+          "description": "Wether to clear the Output of a machine before running a command"
         }
       }
     }
@@ -452,6 +459,7 @@
   "devDependencies": {
     "@types/mocha": "^10.0.7",
     "@types/node": "20.x",
+    "@types/ssh2": "^1.15.1",
     "@types/vscode": "^1.92.0",
     "@typescript-eslint/eslint-plugin": "^7.14.1",
     "@typescript-eslint/parser": "^7.11.0",
@@ -460,7 +468,8 @@
     "eslint": "^8.57.0"
   },
   "dependencies": {
+    "ansi-colors": "^4.1.3",
     "appdata-path": "^1.0.0",
-    "node-ssh": "^13.2.0"
+    "ssh2": "^1.15.0"
   }
 }

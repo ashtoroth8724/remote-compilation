@@ -25,8 +25,13 @@
         "markdown.extension.toc.levels": "2..3",
         "markdown.extension.toc.updateOnSave": true,
         "cSpell.words": [
+            "Abderrahmane",
+            "ansi",
             "appdata",
-            "ashtoroth"
+            "ashtoroth",
+            "Keymaps",
+            "MEHENNI",
+            "TOUCHARD"
         ]
     }
 }

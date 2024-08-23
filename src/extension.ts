@@ -3,8 +3,6 @@ import { TreeMachine, MachineItem, MachinePathItem} from './treeMachine';
 import { register } from 'module';
 import {TreeMacro, MacroItem, MacroList, MacroLocal, MacroBuild, MacroRemote, MacroVSCode} from './treeMacro';
 import * as path from 'path';
-
-//npm install -S appdata-path
 import getAppDataPath from "appdata-path";
 
 export function activate(context: vscode.ExtensionContext) {
@@ -45,6 +43,9 @@ export function activate(context: vscode.ExtensionContext) {
     });
     vscode.commands.registerCommand('remote-compilation.refreshTreeMachine', () => {
         treeMachine.refresh();
+    });
+    vscode.commands.registerCommand('remote-compilation.openTerminal', async (machine: MachineItem) => {
+        await machine.openTerminal();
     });
 
 

@@ -204,6 +204,8 @@ export class MacroList extends vscode.TreeItem {
 }
 
 export interface MacroItem extends vscode.TreeItem {
+    parent?: MacroList;
+
     run(machine?: MachineItem | undefined, machines?: TreeMachine | undefined, type?: string | undefined): void;
     getCommand(): string;
 }
@@ -291,25 +293,24 @@ export class MacroBuild extends vscode.TreeItem implements MacroItem {
                 await machine.toggleConnect();
                 if (!machine.getSelectedPath() && machines.defaultPath) {
                     machine.getDefaultPath();
-                }
-                if (!machine.getSelectedPath()) {
+                } else if (!machine.getSelectedPath()) {
                     vscode.window.showErrorMessage("No path selected");
                     return;
                 }
-                terminal = machine.terminal;
+                if (path) {
+                    await machine.executeCommand(`${this.getMakeCommand(type)}`);
+                } else {
+                    await machine.executeCommand(this.getMakeCommand(type));
+                }
             } else {
                 // running build locally
                 terminal = vscode.window.terminals.find(terminal => terminal.name === "Remote Compilation");
                 if (!terminal) {
                     terminal = vscode.window.createTerminal("Remote Compilation");
                 }
+                terminal.show();
+                terminal.sendText(this.getMakeCommand(type));
             }
-            if (!terminal) {
-                vscode.window.showErrorMessage("No terminal found");
-                return;
-            }
-            terminal.show();
-            terminal.sendText(this.getMakeCommand(type));
         }
     }
 

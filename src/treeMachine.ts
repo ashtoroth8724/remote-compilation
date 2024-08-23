@@ -1,8 +1,8 @@
 // treeMachine.ts
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { get } from 'http';
-import { error } from 'console';
+import { Client } from 'ssh2';
+import ansiColors from 'ansi-colors';
 
 function sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -235,7 +235,6 @@ export class TreeMachine implements vscode.TreeDataProvider<vscode.TreeItem> {
     }
 }
 
-//TODO: Explore how to send ssh commands and read output with node-ssh and try to implement it
 export class MachineItem extends vscode.TreeItem {
     private _onDidChangeDescription: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
     readonly onDidChangeDescription: vscode.Event<void> = this._onDidChangeDescription.event;
@@ -247,7 +246,10 @@ export class MachineItem extends vscode.TreeItem {
     port?: number;
     password?: string;
     user?: string;
-    terminal?: vscode.Terminal;
+    
+    channel?: vscode.OutputChannel;
+    ssh_client?: Client;
+    ssh_shell?: any;
 
 
     constructor(label: string, parent: TreeMachine) {
@@ -256,13 +258,7 @@ export class MachineItem extends vscode.TreeItem {
         this.description = this.status;
         this.iconPath = new vscode.ThemeIcon('vm');
         this.contextValue = 'machineItem';
-        const existingTerminal = vscode.window.terminals.find(terminal => terminal.name === this.label?.toString());
-        if (existingTerminal) {
-            this.terminal = existingTerminal;
-            this.status = 'online';
-            this.terminal.show();
-            this.refresh();
-        }
+        this.status = 'offline';
         this.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
         console.log("MachineItem created: ", this.label);
     }
@@ -270,58 +266,88 @@ export class MachineItem extends vscode.TreeItem {
     private async connect() {
         this.status = 'connecting';
         this.refresh();
-
+        console.log(`Connecting to ${this.label}, at ${this.ip}, port ${this.port}`);
         try {
-            const {NodeSSH} = require('node-ssh');
-            const ssh = new NodeSSH();
-            await ssh.connect({
+            this.ssh_client = new Client();
+            this.ssh_client.on('ready', () => {
+                this.channel = vscode.window.createOutputChannel(`${this.label}`);
+                this.channel.show();
+                console.log(`Client ${this.label}:: ready`);
+                this.ssh_client?.shell((err: any, stream: any) => {
+                    if (err) {throw err;}
+                    this.ssh_shell = stream;
+                    stream.on('close', () => {
+                        this.channel?.append(`\nConnection closed\n`);
+                        this.status = 'offline';
+                        this.refresh();
+                        console.log(`Stream ${this.label}:: close`);
+                        this.ssh_client?.end();
+                    }).on('data', (data: any) => {
+                        //console.log('OUTPUT: ' + data);
+                        if (this.channel) {
+                            const uncoloredData = ansiColors.stripColor(data.toString());
+                            //console.log('Uncolored data:', uncoloredData);
+                            this.channel.append(uncoloredData);
+                        }
+                    });
+                });
+                this.status = 'focused';
+                this.refresh();
+            }).connect({
                 host: this.ip,
-                username: this.user,
                 port: this.port || 22,
+                username: this.user,
                 password: this.password
-            }).catch((err: any) => {
-                throw err;
             });
-            await ssh.dispose();
-        }catch (err: any | unknown) {
+        } catch (err: any | unknown) {
             vscode.window.showErrorMessage(`Error during connection to ${this.label}${err.message ? `: ${err.message}` : ''}`, 'Retry', 'Ignore').then((value) => {
                 if (value === 'Retry') {
                     this.connect();
                 }
             });
             this.status = 'offline';
-            this.refresh();
             return;
         }
-        //TODO: find a better way to open a "cleaner" terminal
-        this.terminal = vscode.window.createTerminal({ name: this.label?.toString() });
-        this.terminal.show();
+        return;
+    }
+
+    async disconnect() {
+        this.ssh_shell.end('ls -l\nexit\n');
+        this.ssh_client = undefined;
+        this.channel?.dispose();
+        this.status = 'offline';
+        this.refresh();
+    }
+
+    async openTerminal() {
+        if (this.status === 'offline' || this.status === 'connecting') {
+            vscode.window.showInformationMessage('Machine is not connected');
+            return;
+        }
+        let terminal: vscode.Terminal | undefined = vscode.window.terminals.find((terminal) => terminal.name === this.label);
+        if (terminal) {
+            terminal.show();
+            return;
+        }
+        terminal = vscode.window.createTerminal({ name: this.label?.toString() });
+        terminal.show();
         if (this.port) {
-            this.terminal.sendText(`ssh -p ${this.port} ${this.user}@${this.ip}`);
+            terminal.sendText(`ssh -p ${this.port} ${this.user}@${this.ip}`);
         } else {
-            this.terminal.sendText(`ssh ${this.user}@${this.ip}`);
+            terminal.sendText(`ssh ${this.user}@${this.ip}`);
         }
         await sleep(5000); //TODO: find a better way to wait for the terminal to be ready
         console.log(`Connected to ${this.label}, on ${this.ip}, port ${this.port}`);
         if (this.password) {
-            this.terminal.sendText(this.password);
+            terminal.sendText(this.password);
             console.log('Password sent');
         }
-        this.status = 'focused';
         return;
-    }
-
-    disconnect() {
-        this.terminal?.dispose();
-        this.unselectAllPath();
-        this.status = 'offline';
-        this.refresh();
     }
 
     async toggleConnect() {
         if ((this.status === 'online')) {
             this.parent?.unfocusAll();
-            this.terminal?.show();
             this.status = 'focused';
         } else if (this.status === 'offline') {
             await this.connect();
@@ -337,9 +363,29 @@ export class MachineItem extends vscode.TreeItem {
         });
     }
 
-    executeCommand(command: string) {
-        this.terminal?.show();
-        this.terminal?.sendText(command);
+    async executeCommand(command: string) {
+        try{
+            if (!this.ssh_client) {
+                throw new Error('No ssh connection');
+            } else if(this.status !== 'focused') {
+                throw new Error('Machine not focused');
+            } else if (!command) {
+                throw new Error('No command selected');
+            } else if (!path) {
+                throw new Error('No path selected');
+            }
+            if (this.channel) {
+                if (vscode.workspace.getConfiguration("remote-compilation").get("clearOutputBeforeExecution", false)) {
+                    this.channel.clear();
+                }
+                this.channel.show();
+            } else {
+                throw new Error('No output channel');
+            }
+            await this.ssh_shell.write(command + '\n');
+        } catch (err: any) {
+            vscode.window.showErrorMessage(`Error executing command "${command}": ${err.message}`);
+        }
     }
 
     getSelectedPath(): string | undefined {
@@ -371,6 +417,7 @@ export class MachineItem extends vscode.TreeItem {
                 this.iconPath = new vscode.ThemeIcon('vm');
             }
             this.parent.setDescription(this.status, this);
+        
         }
     }
 
