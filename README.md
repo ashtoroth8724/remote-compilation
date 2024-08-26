@@ -45,7 +45,7 @@ The remote root is supposed to be the absolute path to the shared folder on your
 If the extension finds both settings, it will generate the default path by adding the remote project path to the remote root (e.g., `/media/sf_sharedFolder/project_1`). That way, if your shared folder is not the same as that of your collaborator, your default path should still be correct (if not, you can add a path to the machine).
 
 ## Extension Settings
-:hammer_and_wrench: Main settings:
+Main settings:
 - `remote-compilation.machines`: The machines to run the macros on.
 - `remote-compilation.macros`: The macros to run.
 - `remote-compilation.remoteRoot`: The root folder (or shared folder) on the VM.
@@ -59,7 +59,7 @@ See **settings example** [here](extension-settings.md#examples)
 - The extension cannot read the output of the terminal, nor the time it takes to run a command. This causes "run all build macros" not to work if there are several builds on the same machine, and if those take longer than a few seconds.
 
 ## Release Notes
-:construction: [Changelog](CHANGELOG.md)
+[Changelog](CHANGELOG.md)
 
 ## Links
 The GitHub Project Page: [remote-compilation](https://github.com/ashtoroth8724/remote-compilation)\

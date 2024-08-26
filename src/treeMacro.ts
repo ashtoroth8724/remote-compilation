@@ -3,11 +3,13 @@ import path from 'path';
 import * as vscode from 'vscode';
 import { TreeMachine, MachineItem, MachinePathItem} from './treeMachine';
 import { openSettings } from './extension';
+import { exec } from 'child_process';
 
 
 export class TreeMacro implements vscode.TreeDataProvider<vscode.TreeItem> {
     private _onDidChangeTreeData: vscode.EventEmitter<vscode.TreeItem | undefined | void> = new vscode.EventEmitter<vscode.TreeItem | undefined | void>();
     readonly onDidChangeTreeData: vscode.Event<vscode.TreeItem | undefined | void> = this._onDidChangeTreeData.event;
+    localOutput: vscode.OutputChannel | undefined;
 
     getTreeItem(element: vscode.TreeItem): vscode.TreeItem | Thenable<vscode.TreeItem> {
         return element;
@@ -26,14 +28,14 @@ export class TreeMacro implements vscode.TreeDataProvider<vscode.TreeItem> {
 
     getItems(): vscode.TreeItem[] {
         const items: vscode.TreeItem[] = [];        
-        const macroBuildList = new MacroList("Build Macros");
+        const macroBuildList = new MacroList("Build Macros", this);
         macroBuildList.iconPath = new vscode.ThemeIcon('run-below');
         macroBuildList.contextValue = "buildMacroList";
-        const macroRemoteList = new MacroList("Remote Macros");
+        const macroRemoteList = new MacroList("Remote Macros", this);
         macroRemoteList.iconPath = new vscode.ThemeIcon('vm');
-        const macroLocalList = new MacroList("Local Macros");
+        const macroLocalList = new MacroList("Local Macros", this);
         macroLocalList.iconPath = new vscode.ThemeIcon('terminal');
-        const macroVSCodeList = new MacroList("VSCode Macros");
+        const macroVSCodeList = new MacroList("VSCode Macros", this);
         macroVSCodeList.iconPath = new vscode.ThemeIcon('code');
         const macros = this.getMacros();
         if (macros.length > 0) {
@@ -178,11 +180,13 @@ export class TreeMacro implements vscode.TreeDataProvider<vscode.TreeItem> {
 
 export class MacroList extends vscode.TreeItem {
     children: MacroItem[] | undefined;
+    parent: TreeMacro;
 
-    constructor(label: string) {
+    constructor(label: string, parent: TreeMacro) {
         super(label);
         this.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
         this.contextValue = 'macroList';
+        this.parent = parent;
     }
 
     addChild(child: MacroItem) {
@@ -198,6 +202,71 @@ export class MacroList extends vscode.TreeItem {
                 vscode.window.showInformationMessage(`Running ${child.label}: ${child.getMakeCommand(type)}`);
                 await child.run(undefined, treeMachine, type);
             }
+        });
+    }
+
+    localExecute(command: string) {
+        if (process.platform === "win32") {
+            this.localExecuteWin(command);
+        } else if (process.platform === "linux") {
+            this.localExecuteLinux(command);
+        } else {
+            vscode.window.showErrorMessage("Platform not supported");
+        }
+    }
+
+    localExecuteWin(command: string) {
+        const workspace = vscode.workspace.workspaceFolders?.[0];
+        const workspace_path = workspace?.uri.fsPath;
+        const command_path = `cd '${workspace_path}';${command}`;
+        const powershell_command = `powershell.exe -Command "${command_path.replace(/"/g, '""')}"`;
+
+        const process = exec(powershell_command);
+
+        if (!this.parent.localOutput) {
+            this.parent.localOutput = vscode.window.createOutputChannel("Local Compilation");
+            this.parent.localOutput.append(`[Local ${workspace_path} ]$ `);
+        }
+        this.parent.localOutput.show();
+        this.parent.localOutput.append(command + "\n");
+
+        process.stdout?.on('data', (data) => {
+            this.parent.localOutput?.append(data);
+        });
+
+        process.stderr?.on('data', (data) => {
+            this.parent.localOutput?.append(`${data}`);
+        });
+
+        process.on('close', (code) => {
+            this.parent.localOutput?.append(`[Local ${workspace_path} ]$ `);
+        });
+    }
+
+    localExecuteLinux(command: string) {
+        const workspace = vscode.workspace.workspaceFolders?.[0];
+        const workspace_path = workspace?.uri.fsPath;
+        const command_path = `cd "${workspace_path}";${command}`;
+
+        const process = exec(command_path);
+
+        if (!this.parent.localOutput) {
+            this.parent.localOutput = vscode.window.createOutputChannel("Local Compilation");
+            this.parent.localOutput.append(`[Local ${workspace_path} ]$ `);
+        }
+        this.parent.localOutput.show();
+        this.parent.localOutput.append(command + "\n");
+
+        process.stdout?.on('data', (data) => {
+            this.parent.localOutput?.append(data);
+        });
+
+        process.stderr?.on('data', (data) => {
+            this.parent.localOutput?.append(`${data}`);
+        });
+
+        process.on('close', (code) => {
+            this.parent.localOutput?.append(`[Local ${workspace_path} ]$ `);
         });
     }
 
@@ -224,17 +293,7 @@ export class MacroLocal extends vscode.TreeItem implements MacroItem {
     }
 
     run(): void {
-        const terminal = vscode.window.terminals.find(terminal => terminal.name === "Remote Compilation");
-        if (this.commandString && terminal) {
-            terminal.show();
-            terminal.sendText(this.commandString);
-        } else if (this.commandString && !terminal) {
-            const terminal = vscode.window.createTerminal("Remote Compilation");
-            terminal.show();
-            terminal.sendText(this.commandString);
-        } else {
-            vscode.window.showErrorMessage("No command to execute");
-        }
+        this.parent?.localExecute(this.commandString);
     }
 
     getCommand(): string {
@@ -303,13 +362,7 @@ export class MacroBuild extends vscode.TreeItem implements MacroItem {
                     await machine.executeCommand(this.getMakeCommand(type));
                 }
             } else {
-                // running build locally
-                terminal = vscode.window.terminals.find(terminal => terminal.name === "Remote Compilation");
-                if (!terminal) {
-                    terminal = vscode.window.createTerminal("Remote Compilation");
-                }
-                terminal.show();
-                terminal.sendText(this.getMakeCommand(type));
+                this.parent?.localExecute(this.getMakeCommand(type));
             }
         }
     }
