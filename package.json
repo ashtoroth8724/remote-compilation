@@ -27,11 +27,7 @@
   "displayName": "Remote Compilation & Macros",
   "description": "A VSCode extension to compile locally or remotely, as well as providing macros",
   "version": "0.0.2",
-  "categories": [
-    "Keymaps",
-    "Testing",
-    "Other"
-  ],
+  "categories": [ "Other" ],
   "keywords": [
     "remote",
     "compilation",
@@ -400,13 +396,15 @@
               },
               "port": {
                 "type": "number",
-                "description": "Port of the machine"
+                "description": "Port of the machine",
+                "default": 22
               }
-            }
-          },
-          "required": [
-            "host"
-          ]
+            },
+            "required": [
+              "ip",
+              "user"
+            ]
+          }
         },
         "remote-compilation.macros": {
           "type": "array",
@@ -424,32 +422,51 @@
               },
               "group": {
                 "type": "string",
-                "description": "Type of the macro, supported groups: 'build', 'remote', 'local', 'vscode'"
-              },
-              "cleanCommand": {
-                "type": "string",
-                "description": "Argument to clean the project (for group 'build' only)"
-              },
-              "subPath": {
-                "type": "string",
-                "description": "Subpath to the make file from the root project (for group 'build' only)"
-              },
-              "buildMachineIP": {
-                "type": "string",
-                "description": "IP of the machine to build on (for group 'build' only), local if not specified"
-              },
-              "makefileName": {
-                "type": "string",
-                "description": "Name of the makefile (for group 'build' only)"
+                "description": "Type of the macro, supported groups: 'build', 'remote', 'local', 'vscode'",
+                "enum": [
+                  "build",
+                  "remote",
+                  "local",
+                  "vscode"
+                ]
               }
-            }
-          },
-          "required": [
-            "command",
-            "group"
-          ],
-          "default": {
-            "port": 22
+            },
+            "required": [
+              "command",
+              "group"
+            ],
+            "oneOf": [
+              {
+                "properties": {
+                  "group": {
+                    "enum": ["build"]
+                  },
+                  "cleanCommand": {
+                    "type": "string",
+                    "description": "Argument to clean the project (for group 'build' only)"
+                  },
+                  "subPath": {
+                    "type": "string",
+                    "description": "Subpath to the make file from the root project (for group 'build' only)"
+                  },
+                  "buildMachineIP": {
+                    "type": "string",
+                    "description": "IP of the machine to build on (for group 'build' only), local if not specified"
+                  },
+                  "makefileName": {
+                    "type": "string",
+                    "description": "Name of the makefile (for group 'build' only)"
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "group": {
+                    "enum": ["remote", "local", "vscode"]
+                  }
+                }
+              }
+            ]
           }
         },
         "remote-compilation.default.remoteRoot": {
@@ -462,15 +479,18 @@
         },
         "remote-compilation.disablePasswordWarnings": {
           "type": "boolean",
-          "description": "Disable password warnings"
+          "description": "Disable password warnings (default: false)",
+          "default": false
         },
         "remote-compilation.clearOutputBeforeExecution": {
           "type": "boolean",
-          "description": "Whether to clear the Output of a machine before running a command (default: false)"
+          "description": "Whether to clear the Output of a machine before running a command (default: false)",
+          "default": false
         },
         "remote-compilation.connectionTimeout": {
           "type": "number",
-          "description": "Connection timeout in seconds (default: 5)"
+          "description": "Connection timeout in seconds (default: 5)",
+          "default": 5
         }
       }
     }
