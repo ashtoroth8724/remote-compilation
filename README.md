@@ -51,7 +51,7 @@ Main settings:
 - `remote-compilation.remoteRoot`: The root folder (or shared folder) on the VM.
 - `remote-compilation.remoteProjectPath`: The path to the project from the VM root.
 
-See **more details** on extension settings [here](extension-settings.md#description-of-the-settings).\
+See **more settings** [here](extension-settings.md#description-of-the-settings).\
 See **settings example** [here](extension-settings.md#examples)
 
 ## Known Issues

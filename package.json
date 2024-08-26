@@ -443,7 +443,11 @@
         },
         "remote-compilation.clearOutputBeforeExecution": {
           "type": "boolean",
-          "description": "Wether to clear the Output of a machine before running a command"
+          "description": "Whether to clear the Output of a machine before running a command (default: false)"
+        },
+        "remote-compilation.connectionTimeout": {
+          "type": "number",
+          "description": "Connection timeout in seconds (default: 5)"
         }
       }
     }

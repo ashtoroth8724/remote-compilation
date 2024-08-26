@@ -226,6 +226,8 @@ export class MacroList extends vscode.TreeItem {
         if (!this.parent.localOutput) {
             this.parent.localOutput = vscode.window.createOutputChannel("Local Compilation");
             this.parent.localOutput.append(`[Local ${workspace_path} ]$ `);
+        } else if (vscode.workspace.getConfiguration("remote-compilation").get("clearOutputBeforeExecution", false)) {
+            this.parent.localOutput.clear();
         }
         this.parent.localOutput.show();
         this.parent.localOutput.append(command + "\n");
@@ -253,6 +255,8 @@ export class MacroList extends vscode.TreeItem {
         if (!this.parent.localOutput) {
             this.parent.localOutput = vscode.window.createOutputChannel("Local Compilation");
             this.parent.localOutput.append(`[Local ${workspace_path} ]$ `);
+        } else if (vscode.workspace.getConfiguration("remote-compilation").get("clearOutputBeforeExecution", false)) {
+            this.parent.localOutput.clear();
         }
         this.parent.localOutput.show();
         this.parent.localOutput.append(command + "\n");

@@ -317,7 +317,7 @@ export class MachineItem extends vscode.TreeItem {
             port: this.port || 22,
             username: this.user,
             password: this.password,
-            timeout: 5000,
+            timeout: vscode.workspace.getConfiguration("remote-compilation").get("connectionTimeout", 5)*1000,
         }).on('error', (err) => {
             if (err.message.startsWith('Timed out')) {return;}
             showError(err);

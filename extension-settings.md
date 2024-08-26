@@ -6,6 +6,8 @@
   - [+ `remote-compilation.remoteRoot` : string](#-remote-compilationremoteroot--string)
   - [+ `remote-compilation.remoteProjectPath` : string](#-remote-compilationremoteprojectpath--string)
   - [+ `remote-compilation.disablePasswordWarnings` : boolean](#-remote-compilationdisablepasswordwarnings--boolean)
+  - [+ `remote-compilation.clearOutputBeforeExecution` : boolean](#-remote-compilationclearoutputbeforeexecution--boolean)
+  - [+ `remote-compilation.connectionTimeout` : number](#-remote-compilationconnectiontimeout--number)
 - [Examples](#examples)
   - [+ code-workspace Template](#-code-workspace-template)
   - [+ settings.json Template (User)](#-settingsjson-template-user)
@@ -47,6 +49,14 @@ Intended to be placed in the workspace settings. It is the path to the project f
 
 ### + `remote-compilation.disablePasswordWarnings` : boolean
 You should always consider using RSA keys to secure your SSH connection ([follow this tutorial](https://kb.iu.edu/d/aews)), but just in case you can't and don't want to be annoyed by pop-ups, here is a workaround.
+
+### + `remote-compilation.clearOutputBeforeExecution` : boolean
+Whether to clear the Output of a machine before running a command.\
+Defaults to False.
+
+### + `remote-compilation.connectionTimeout` : number
+Connection timeout in seconds.\
+Defaults to 5 seconds.
 
 ## Examples
 
@@ -115,7 +125,7 @@ This is a settings example for settings.json (user).
             "port": 22,
             "password": "raspberry"
         }
-    ]
+    ],
 }
 ```
 > Note: These two examples together will create the "default path": `/root/projects/project1`\
