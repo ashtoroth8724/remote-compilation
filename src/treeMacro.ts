@@ -221,7 +221,7 @@ export class MacroList extends vscode.TreeItem {
         const command_path = `cd '${workspace_path}';${command}`;
         const powershell_command = `powershell.exe -Command "${command_path.replace(/"/g, '""')}"`;
 
-        const process = exec(powershell_command);
+        const process_exec = exec(powershell_command);
 
         if (!this.parent.localOutput) {
             this.parent.localOutput = vscode.window.createOutputChannel("Local Compilation");
@@ -232,15 +232,15 @@ export class MacroList extends vscode.TreeItem {
         this.parent.localOutput.show();
         this.parent.localOutput.append(command + "\n");
 
-        process.stdout?.on('data', (data) => {
+        process_exec.stdout?.on('data', (data) => {
             this.parent.localOutput?.append(data);
         });
 
-        process.stderr?.on('data', (data) => {
+        process_exec.stderr?.on('data', (data) => {
             this.parent.localOutput?.append(`${data}`);
         });
 
-        process.on('close', (code) => {
+        process_exec.on('close', (code) => {
             this.parent.localOutput?.append(`[Local ${workspace_path} ]$ `);
         });
     }
@@ -250,7 +250,7 @@ export class MacroList extends vscode.TreeItem {
         const workspace_path = workspace?.uri.fsPath;
         const command_path = `cd "${workspace_path}";${command}`;
 
-        const process = exec(command_path);
+        const process_exec = exec(command_path);
 
         if (!this.parent.localOutput) {
             this.parent.localOutput = vscode.window.createOutputChannel("Local Compilation");
@@ -261,15 +261,15 @@ export class MacroList extends vscode.TreeItem {
         this.parent.localOutput.show();
         this.parent.localOutput.append(command + "\n");
 
-        process.stdout?.on('data', (data) => {
+        process_exec.stdout?.on('data', (data) => {
             this.parent.localOutput?.append(data);
         });
 
-        process.stderr?.on('data', (data) => {
+        process_exec.stderr?.on('data', (data) => {
             this.parent.localOutput?.append(`${data}`);
         });
 
-        process.on('close', (code) => {
+        process_exec.on('close', (code) => {
             this.parent.localOutput?.append(`[Local ${workspace_path} ]$ `);
         });
     }

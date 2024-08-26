@@ -48,105 +48,128 @@
       {
         "command": "remote-compilation.addMachine",
         "title": "Add Machine",
-        "icon": "$(add)"
+        "icon": "$(add)",
+        "category": "Remote Compilation"
       },
       {
         "command": "remote-compilation.removeMachine",
-        "title": "Remove Machine"
+        "title": "Remove Machine",
+        "icon": "$(remove)",
+        "category": "Remote Compilation"
       },
       {
         "command": "remote-compilation.connect",
         "title": "Connect",
-        "icon": "$(plug)"
+        "icon": "$(plug)",
+        "category": "Remote Compilation"
       },
       {
         "command": "remote-compilation.disconnect",
-        "title": "Disconnect"
+        "title": "Disconnect",
+        "category": "Remote Compilation"
       },
       {
         "command": "remote-compilation.addPath",
-        "title": "Add Path"
+        "title": "Add Path",
+        "category": "Remote Compilation"
       },
       {
         "command": "remote-compilation.removePath",
-        "title": "Remove Path"
+        "title": "Remove Path",
+        "category": "Remote Compilation"
       },
       {
         "command": "remote-compilation.selectPath",
-        "title": "Select Path"
+        "title": "Select Path",
+        "category": "Remote Compilation"
       },
       {
         "command": "remote-compilation.unselectPath",
-        "title": "Unselect Path"
+        "title": "Unselect Path",
+        "category": "Remote Compilation"
       },
       {
         "command": "remote-compilation.addMacro",
         "title": "Add Macro",
-        "icon": "$(add)"
+        "icon": "$(add)",
+        "category": "Remote Compilation"
       },
       {
         "command": "remote-compilation.removeMacro",
-        "title": "Remove Macro"
+        "title": "Remove Macro",
+        "category": "Remote Compilation"
       },
       {
         "command": "remote-compilation.runMacro",
         "title": "Run Macro",
-        "icon": "$(debug-start)"
+        "icon": "$(debug-start)",
+        "category": "Remote Compilation"
       },
       {
         "command": "remote-compilation.refreshTreeMacro",
         "title": "Refresh View Macro",
-        "icon": "$(refresh)"
+        "icon": "$(refresh)",
+        "category": "Remote Compilation"
       },
       {
         "command": "remote-compilation.refreshTreeMachine",
         "title": "Refresh View Machine",
-        "icon": "$(refresh)"
+        "icon": "$(refresh)",
+        "category": "Remote Compilation"
       },
       {
         "command": "remote-compilation.editConfig",
         "title": "Edit Config (JSON)",
-        "icon": "$(gear)"
+        "icon": "$(gear)",
+        "category": "Remote Compilation"
       },
       {
         "command": "remote-compilation.cleanMacro",
         "title": "Clean",
-        "icon": "$(debug-stop)"
+        "icon": "$(debug-stop)",
+        "category": "Remote Compilation"
       },
       {
         "command": "remote-compilation.cleanAndBuildMacro",
         "title": "Clean & Build",
-        "icon": "$(debug-continue)"
+        "icon": "$(debug-continue)",
+        "category": "Remote Compilation"
       },
       {
         "command": "remote-compilation.buildMacro",
         "title": "Build",
-        "icon": "$(debug-start)"
+        "icon": "$(debug-start)",
+        "category": "Remote Compilation"
       },
       {
         "command": "remote-compilation.disablePasswordWarning",
         "title": "Disable Password Warnings",
-        "icon": "$(circle-slash)"
+        "icon": "$(circle-slash)",
+        "category": "Remote Compilation"
       },
       {
         "command": "remote-compilation.cleanAllMacro",
         "title": "Run all clean macros",
-        "icon": "$(debug-stop)"
+        "icon": "$(debug-stop)",
+        "category": "Remote Compilation"
       },
       {
         "command": "remote-compilation.buildAllMacro",
         "title": "Run all build macros",
-        "icon": "$(debug-start)"
+        "icon": "$(debug-start)",
+        "category": "Remote Compilation"
       },
       {
         "command": "remote-compilation.cleanAndBuildAllMacro",
         "title": "Run all clean & build macros",
-        "icon": "$(debug-continue)"
+        "icon": "$(debug-continue)",
+        "category": "Remote Compilation"
       },
       {
         "command": "remote-compilation.openTerminal",
         "title": "Open a terminal",
-        "icon": "$(terminal)"
+        "icon": "$(terminal)",
+        "category": "Remote Compilation"
       }
     ],
     "viewsContainers": {
