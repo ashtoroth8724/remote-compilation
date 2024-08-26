@@ -264,55 +264,77 @@ export class MachineItem extends vscode.TreeItem {
     }
 
     private async connect() {
-        this.status = 'connecting';
-        this.refresh();
-        console.log(`Connecting to ${this.label}, at ${this.ip}, port ${this.port}`);
-        try {
-            this.ssh_client = new Client();
-            this.ssh_client.on('ready', () => {
-                this.channel = vscode.window.createOutputChannel(`${this.label}`);
-                this.channel.show();
-                console.log(`Client ${this.label}:: ready`);
-                this.ssh_client?.shell((err: any, stream: any) => {
-                    if (err) {throw err;}
-                    this.ssh_shell = stream;
-                    stream.on('close', () => {
-                        this.channel?.append(`\nConnection closed\n`);
-                        this.status = 'offline';
-                        this.refresh();
-                        console.log(`Stream ${this.label}:: close`);
-                        this.ssh_client?.end();
-                    }).on('data', (data: any) => {
-                        //console.log('OUTPUT: ' + data);
-                        if (this.channel) {
-                            const uncoloredData = ansiColors.stripColor(data.toString());
-                            //console.log('Uncolored data:', uncoloredData);
-                            this.channel.append(uncoloredData);
-                        }
-                    });
-                });
-                this.status = 'focused';
-                this.refresh();
-            }).connect({
-                host: this.ip,
-                port: this.port || 22,
-                username: this.user,
-                password: this.password
-            });
-        } catch (err: any | unknown) {
+        const showError = (err: any) => {
+            if (this.channel) {
+                this.channel.dispose();
+                this.channel = undefined;
+            }
+            if (this.ssh_client) {
+                this.ssh_client.end();
+                this.ssh_client = undefined;
+            }
+            console.log(err);
             vscode.window.showErrorMessage(`Error during connection to ${this.label}${err.message ? `: ${err.message}` : ''}`, 'Retry', 'Ignore').then((value) => {
                 if (value === 'Retry') {
                     this.connect();
                 }
             });
             this.status = 'offline';
+            this.refresh();
             return;
-        }
+        };
+
+        this.status = 'connecting';
+        this.refresh();
+        console.log(`Connecting to ${this.label}, at ${this.ip}, port ${this.port}`);
+        this.ssh_client = new Client();
+        this.ssh_client.on('ready', () => {
+            this.channel = vscode.window.createOutputChannel(`${this.label}`);
+            this.channel.show();
+            console.log(`Client ${this.label}:: ready`);
+            this.ssh_client?.shell((err: any, stream: any) => {
+                if (err) {showError(err);}
+                this.ssh_shell = stream;
+                stream.on('close', () => {
+                    this.channel?.append(`\nConnection closed\n`);
+                    this.status = 'offline';
+                    this.refresh();
+                    console.log(`Stream ${this.label}:: close`);
+                    this.ssh_client?.end();
+                }).on('data', (data: any) => {
+                    //console.log('OUTPUT: ' + data);
+                    if (this.channel) {
+                        const uncoloredData = ansiColors.stripColor(data.toString());
+                        //console.log('Uncolored data:', uncoloredData);
+                        this.channel.append(uncoloredData);
+                    }
+                });
+            });
+            this.status = 'focused';
+            this.refresh();
+        }).connect({
+            host: this.ip,
+            port: this.port || 22,
+            username: this.user,
+            password: this.password,
+            timeout: 5000,
+        }).on('error', (err) => {
+            if (err.message.startsWith('Timed out')) {return;}
+            showError(err);
+        }).on('timeout', () => {
+            showError(new Error('Connection timeout'));
+        }).on('close', () => {
+            if (this.status === 'connecting') {
+                showError(new Error('Connection closed'));
+            } else {
+                console.log('Connection closed');
+            }
+        });
         return;
     }
 
     async disconnect() {
-        this.ssh_shell.end('ls -l\nexit\n');
+        this.ssh_shell?.end('exit\n');
         this.ssh_client = undefined;
         this.channel?.dispose();
         this.status = 'offline';
