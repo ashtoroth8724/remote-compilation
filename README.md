@@ -1,21 +1,22 @@
-# ![Extension Icon](./ressources/images/icon/logo-extension-32.png) Remote Compilation & Macros
+# ![logo-extension-32.png](./ressources/images/icon/logo-extension-32.png) Remote Compilation & Macros
 
 Remote Compilation is a VSCode extension I developed during my internship at **IN-CORE Systèmes**. Its objective is to reproduce part of NetBeans' functionalities we were using to compile C/C++ over a virtual machine. The extension aims to easily share compilation configs and macros among collaborators based on a workspace, but keep the machine configs proper to a user.
 
 ## Table of Contents
-- [Usage](#usage)
 - [Features](#features)
   - [+ Machines](#-machines)
   - [+ Macros](#-macros)
   - [+ Build Macros](#-build-macros)
   - [+ Default Paths](#-default-paths)
 - [Extension Settings](#extension-settings)
+- [Usage](#usage)
+  - [+ About machines](#-about-machines)
+  - [+ About Macros](#-about-macros)
 - [Known Issues](#known-issues)
+- [Upgrade Points](#upgrade-points)
 - [Release Notes](#release-notes)
 - [Links](#links)
 
-## Usage
-<!--TODO: Add gifs on how to use the extension-->
 
 ## Features
 
@@ -32,7 +33,7 @@ Macros can be found on the bottom part of the view, they are defined by their ty
 |`local`  | macros that run terminal commands in a default workspace terminal proper to the extension.|
 | `remote`| macros that run terminal commands in a terminal connected via SSH to a machine. A machine needs to be connected **and** focused to run a remote macro on.|
 | `vscode`| macros that run VS Code commands.                                               |
-| `build` | (see [below](#build-macros)).                                                   |
+| `build` | (see [below](#-build-macros)).                                                   |
 
 **You can create macros from te view, but for more advanced configuration, you need to edit the JSON**
 
@@ -54,9 +55,32 @@ Main settings:
 See **more settings** [here](extension-settings.md#description-of-the-settings).\
 See **settings example** [here](extension-settings.md#examples)
 
+## Usage
+Find below some gif I hope will help you to use my extension.
+
+### + About machines
+
+>#### Creating a machine
+>![creating_and_editing_vm.gif](./ressources/images/readme/creating_and_editing_vm.gif)
+
+>#### Connecting to a Machine
+>![connecting_to_vm.gif](./ressources/images/readme/connecting_to_vm.gif)
+
+### + About Macros
+
+>#### Creating a local/remote macro
+>![creating_and_editing_local_macro.gif](./ressources/images/readme/creating_and_editing_local_macro.gif)
+
+>#### Creating a build macro
+>![creating_and_editing_build_macro.gif](./ressources/images/readme/creating_and_editing_build_macro.gif)
+
+
 ## Known Issues
 
-- The extension cannot read the output of the terminal, nor the time it takes to run a command. This causes "run all build macros" not to work if there are several builds on the same machine, and if those take longer than a few seconds.
+None (for now)
+
+## Upgrade Points
+- having the remote root proper to a machine instead of global to all of them
 
 ## Release Notes
 [Changelog](CHANGELOG.md)
