@@ -13,7 +13,8 @@
   },
   "contributors": [
     {
-      "name": "Pierre TOUCHARD (tester)"
+      "name": "Pierre TOUCHARD (tester)",
+      "url": "https://github.com/agri0s"
     },
     {
       "name": "Abderrahmane MEHENNI (tester)"
@@ -26,7 +27,7 @@
   "name": "remote-compilation",
   "displayName": "Remote Compilation & Macros",
   "description": "A VSCode extension to compile locally or remotely, as well as providing macros",
-  "version": "0.0.2",
+  "version": "0.0.2-beta",
   "categories": [ "Other" ],
   "keywords": [
     "remote",

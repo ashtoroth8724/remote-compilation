@@ -319,10 +319,8 @@ export class MachineItem extends vscode.TreeItem {
             password: this.password,
             timeout: vscode.workspace.getConfiguration("remote-compilation").get("connectionTimeout", 5)*1000,
         }).on('error', (err) => {
-            if (err.message.startsWith('Timed out')) {return;}
+            if (err.message.startsWith('Channel has been closed')) {return;}
             showError(err);
-        }).on('timeout', () => {
-            showError(new Error('Connection timeout'));
         }).on('close', () => {
             if (this.status === 'connecting') {
                 showError(new Error('Connection closed'));
