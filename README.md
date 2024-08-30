@@ -12,10 +12,9 @@ Remote Compilation is a VSCode extension I developed during my internship at **I
 - [Usage](#usage)
   - [+ About machines](#-about-machines)
   - [+ About Macros](#-about-macros)
-- [Known Issues](#known-issues)
 - [Upgrade Points](#upgrade-points)
 - [Release Notes](#release-notes)
-- [Links](#links)
+- [More](#more)
 
 
 ## Features
@@ -24,7 +23,7 @@ This extension revolves around 4 features:
 
 ### + Machines
 Machines can be found on the top part of the view. They are defined in the settings by their IP and hostname. They contain paths, which are paths to the project you want to compile on.\
-**You can create machines from te view, but for more advanced configuration, you need to edit the JSON**
+**You can create machines from te view, but for more advanced configuration, you need to edit the JSON.**
 
 ### + Macros
 Macros can be found on the bottom part of the view, they are defined by their type, name and command. Macros come in 4 categories:
@@ -35,7 +34,7 @@ Macros can be found on the bottom part of the view, they are defined by their ty
 | `vscode`| macros that run VS Code commands.                                               |
 | `build` | (see [below](#-build-macros)).                                                   |
 
-**You can create macros from te view, but for more advanced configuration, you need to edit the JSON**
+**You can create macros from te view, but for more advanced configuration, you need to edit the JSON.**
 
 ### + Build Macros
 Build macros are macros used to compile code over SSH or in the local terminal. These macros reproduce part of NetBeans' functionalities to compile. They only run the `make` command based on the arguments provided. You can choose a subpath and/or a makefile name that will be used to generate the `make` command with the arguments provided.
@@ -53,7 +52,7 @@ Main settings:
 - `remote-compilation.remoteProjectPath`: The path to the project from the VM root.
 
 See **more settings** [here](extension-settings.md#description-of-the-settings).\
-See **settings example** [here](extension-settings.md#examples)
+See **settings example** [here](extension-settings.md#examples).
 
 ## Usage
 Find below some gif I hope will help you to use my extension.
@@ -74,19 +73,23 @@ Find below some gif I hope will help you to use my extension.
 >#### Creating a build macro
 >![creating_and_editing_build_macro.gif](./ressources/images/readme/creating_and_editing_build_macro.gif)
 
-
+<!--
 ## Known Issues
-
 None (for now)
+-->
 
 ## Upgrade Points
+<!--TODO: having the remote root proper to a machine instead of global to all of them-->
 - having the remote root proper to a machine instead of global to all of them
-
+<!--TODO: Add a compilation target ip "WSL" to use wsl to compile the code-->
+- Add a compilation target ip "WSL" to use wsl to compile the code
 ## Release Notes
-[Changelog](CHANGELOG.md)
+See Changelog [here](CHANGELOG.md).
 
-## Links
+## More
 The GitHub Project Page: [remote-compilation](https://github.com/ashtoroth8724/remote-compilation)\
+Contributions are welcomed
+
 My GitHub Page: [@ashtoroth8724](https://github.com/ashtoroth8724)
 
 **Enjoy!**
