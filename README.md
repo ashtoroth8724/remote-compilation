@@ -87,6 +87,8 @@ None (for now)
 See Changelog [here](CHANGELOG.md).
 
 ## More
+Extension page [here](https://marketplace.visualstudio.com/items?itemName=ashtoroth.remote-compilation&ssr=false#overview)
+
 The GitHub Project Page: [remote-compilation](https://github.com/ashtoroth8724/remote-compilation)\
 Contributions are welcomed
 
